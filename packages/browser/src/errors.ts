@@ -12,6 +12,8 @@ export const ERROR_CODES = [
   'NAVIGATION_TIMEOUT',
   'NAVIGATION_FAILED',
   'HISTORY_UNAVAILABLE',
+  'CAPTURE_FAILED',
+  'INSPECTION_FAILED',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

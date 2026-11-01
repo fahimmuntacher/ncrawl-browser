@@ -6,14 +6,18 @@ import { startMockErp, type MockErp } from '@ncrawl/mock-erp';
 import type { Page } from 'playwright';
 import { loadConfig, type BrowserConfig } from '../src/config.ts';
 import { createLogger, type Logger } from '../src/logger.ts';
+import { Inspector } from '../src/inspection/inspector.ts';
 import { ProfileStore } from '../src/profiles/profile-store.ts';
 import { SessionManager } from '../src/runtime/session-manager.ts';
+import { CaptureStore } from '../src/storage/capture-store.ts';
 
 export interface Harness {
   erp: MockErp;
   config: BrowserConfig;
   profiles: ProfileStore;
   sessions: SessionManager;
+  captures: CaptureStore;
+  inspector: Inspector;
   logLines: string[];
   logger: Logger;
   dispose(): Promise<void>;
@@ -26,9 +30,11 @@ export async function createHarness(env: Record<string, string> = {}): Promise<H
   const logger = createLogger('debug', {}, (l) => logLines.push(l));
   const profiles = new ProfileStore(dataDir);
   const sessions = new SessionManager({ config, profiles, logger });
+  const captures = new CaptureStore(dataDir);
+  const inspector = new Inspector({ sessions, captures, logger });
   const erp = await startMockErp();
   return {
-    erp, config, profiles, sessions, logLines, logger,
+    erp, config, profiles, sessions, captures, inspector, logLines, logger,
     async dispose() {
       await sessions.shutdown();
       await erp.close();

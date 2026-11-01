@@ -42,6 +42,10 @@ node src/cli.ts login acme-erp https://erp.example.com/
 # Check that the saved login works (prints status, final URL, title as JSON).
 node src/cli.ts check acme-erp https://erp.example.com/dashboard --headless
 
+# Inspect one page: saves screenshot + observation JSON (DOM, accessibility tree,
+# interactive elements, navigation links, network metadata) under NCRAWL_DATA_DIR/captures/.
+node src/cli.ts inspect acme-erp https://erp.example.com/dashboard --full-page
+
 node src/cli.ts profile list
 node src/cli.ts profile delete acme-erp
 ```

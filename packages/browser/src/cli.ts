@@ -15,6 +15,10 @@ const USAGE = `ncrawl-browser <command>
                               The login is saved in the profile. Close the browser window (or Ctrl+C) when done.
   check <projectId> <url>     Open <url> with the project's profile and print where it landed (JSON).
                               Add --headless to run without a window.
+  inspect <projectId> <url>   Open <url>, wait for it to settle, and save a full page observation
+                              (metadata, DOM, accessibility tree, interactive elements, links, screenshot,
+                              network metadata). Prints a summary and the saved file paths.
+                              Add --full-page for a full-page screenshot, --headless to run without a window.
 
 Configuration comes from NCRAWL_* environment variables (see .env.example).`;
 
@@ -22,7 +26,7 @@ async function main(argv: string[]): Promise<number> {
   const { values, positionals } = parseArgs({
     args: argv,
     allowPositionals: true,
-    options: { name: { type: 'string' }, headless: { type: 'boolean' }, help: { type: 'boolean', short: 'h' } },
+    options: { name: { type: 'string' }, headless: { type: 'boolean' }, 'full-page': { type: 'boolean' }, help: { type: 'boolean', short: 'h' } },
   });
   const [cmd, sub, arg] = positionals;
   if (values.help || !cmd) {
@@ -65,6 +69,35 @@ async function main(argv: string[]): Promise<number> {
       try {
         const { navigation } = await rt.sessions.openPage(session.sessionId, arg);
         return print(navigation);
+      } finally {
+        await rt.sessions.closeSession(session.sessionId);
+      }
+    }
+
+    if (cmd === 'inspect' && sub && arg) {
+      const session = await rt.sessions.createSession({ kind: 'persistent', projectId: sub, headless: values.headless ?? false });
+      try {
+        const pageId = session.pages[0]!.pageId;
+        await rt.sessions.navigate(session.sessionId, pageId, { url: arg });
+        const obs = await rt.inspector.inspectPage(session.sessionId, pageId, { screenshot: values['full-page'] ? 'full_page' : 'viewport' });
+        return print({
+          status: obs.status,
+          errors: obs.errors,
+          url: obs.metadata?.url,
+          title: obs.metadata?.title,
+          stable: obs.stability?.stable,
+          counts: {
+            domNodes: obs.dom?.nodes.length,
+            accessibilityNodes: obs.accessibility?.nodes.length,
+            interactiveElements: obs.interactiveElements?.length,
+            navigationLinks: obs.navigationLinks?.length,
+            expandableGroups: obs.expandableGroups?.length,
+            networkRequests: obs.network?.summary.total,
+            failedRequests: obs.network?.summary.failed,
+          },
+          screenshot: obs.screenshot && `${rt.captures.root}/${obs.screenshot.file}`,
+          observation: obs.file && `${rt.captures.root}/${obs.file}`,
+        });
       } finally {
         await rt.sessions.closeSession(session.sessionId);
       }

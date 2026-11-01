@@ -120,6 +120,10 @@ export async function startMockErp(opts: { port?: number; host?: string } = {}):
         return res.end();
       }
       if (p === '/api/stats') return json(res, 200, stats);
+      if (p === '/api/ping') {
+        res.writeHead(204);
+        return res.end();
+      }
 
       if (p === '/static/help') {
         return html(200, 'Help — Mock ERP', `<div class="static"><h1>Help</h1>

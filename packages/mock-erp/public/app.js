@@ -127,6 +127,11 @@ async function renderMain(route) {
   if (location.pathname !== route.path) return; // navigated away while loading
   main.querySelector('.loading').remove();
   main.append(el('p', {}, `${data.rows.length} records in ${route.trail.join(' / ')}.`), table(data.rows));
+  if (route.path === '/app') {
+    // Deliberate test fixtures: a token in a query string (must be redacted) and a request that fails.
+    fetch('/api/ping?access_token=mock-query-secret&view=dashboard').catch(() => {});
+    main.append(el('img', { src: 'http://127.0.0.1:65531/missing-logo.png', alt: 'Partner logo' }));
+  }
   if (route.form) {
     main.append(el('h2', {}, 'Create new'),
       el('form', { method: 'post', action: '/api/mutate', class: 'create-form' },

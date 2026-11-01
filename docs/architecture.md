@@ -15,7 +15,8 @@ flowchart LR
     PS[Profile store<br/>per-project userDataDir · lock]
     PR[Page registry]
     NAV[Navigation<br/>URL policy · timeouts · bounded retries]
-    INS[Inspection engine · Phase 2<br/>DOM · a11y · elements · screenshots<br/>history · network metadata]
+    INS[Inspection engine<br/>DOM · a11y · elements · screenshots]
+    OBS[Observers<br/>history · network metadata]
     RED[Redaction]
     LOG[Structured JSON logs]
   end
@@ -32,6 +33,9 @@ flowchart LR
   SM --> PR
   PR --> NAV
   PR --> INS
+  PR --> OBS
+  OBS --> CHR
+  INS --> OBS
   INS --> RED
   NAV --> CHR
   INS --> CHR
@@ -61,4 +65,14 @@ Module layout (`packages/browser/src`):
 | `runtime/session-manager.ts` | Launch/close/restart sessions; status; crash detection |
 | `runtime/page-registry.ts` | Page IDs ↔ Playwright pages within a session |
 | `runtime/navigation.ts` | navigate/back/forward/reload with timeouts and retries |
-| `cli.ts` | Manual login and quick checks |
+| `observers/history-recorder.ts` | Main-frame navigations per page from CDP events (document + SPA), with initiator |
+| `observers/network-observer.ts` | Per-session request metadata (no headers/bodies), in-flight tracking |
+| `inspection/stability.ts` | Wait for load + DOM quiet + network quiet (bounded) |
+| `inspection/page-metadata.ts` | URL, title, viewport/document size, headings, word count |
+| `inspection/dom-snapshot.ts` | Bounded DOM tree with attribute allow-list; never form values |
+| `inspection/accessibility.ts` | Chromium AX tree, pruned; text outline; no input values |
+| `inspection/interactive.ts` | Interactive elements, stable IDs, locator hints, risk; navigation links; expandable groups |
+| `inspection/screenshot.ts` | Viewport / full-page / custom-viewport captures tied to a history position |
+| `inspection/inspector.ts` | One `PageObservation` combining all parts; partial results on part failure |
+| `storage/capture-store.ts` | `captures/<project>/<session>/NNNN_<slug>.{png,screenshot.json,observation.json}` |
+| `cli.ts` | Manual login, checks, one-shot inspection |

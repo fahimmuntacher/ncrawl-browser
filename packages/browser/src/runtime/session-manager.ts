@@ -3,6 +3,8 @@ import type { BrowserConfig } from '../config.ts';
 import { NcrawlError } from '../errors.ts';
 import { newId } from '../ids.ts';
 import type { Logger } from '../logger.ts';
+import { HistoryRecorder, type HistoryEntry, type NavigationInitiator } from '../observers/history-recorder.ts';
+import { NetworkObserver, type NetworkQuery, type NetworkRecord } from '../observers/network-observer.ts';
 import type { ProfileStore } from '../profiles/profile-store.ts';
 import { redactText } from '../redaction.ts';
 import { CreateSessionSchema, NavigateSchema, type CreateSessionInput, type CreateSessionOptions } from '../schemas.ts';
@@ -43,11 +45,24 @@ interface Session {
   status: SessionStatus;
   context: BrowserContext | null;
   pages: PageRegistry;
+  histories: Map<string, HistoryRecorder>;
+  /** Kept across restarts so network metadata from before a crash is not lost. */
+  network: NetworkObserver;
   releaseProfile: (() => void) | null;
   createdAt: string;
   endedAt: string | null;
   endReason: string | null;
   restarts: number;
+}
+
+/** What the inspection engine needs to observe one page. */
+export interface InspectionTarget {
+  sessionId: string;
+  projectId: string | null;
+  pageId: string;
+  page: Page;
+  history: HistoryRecorder;
+  network: NetworkObserver;
 }
 
 export interface SessionManagerDeps {
@@ -85,6 +100,8 @@ export class SessionManager {
       status: 'starting',
       context: null,
       pages: new PageRegistry((entry) => this.#log(session).warn('page crashed', { pageId: entry.id })),
+      histories: new Map(),
+      network: new NetworkObserver(),
       releaseProfile: null,
       createdAt: new Date().toISOString(),
       endedAt: null,
@@ -138,17 +155,42 @@ export class SessionManager {
     context.setDefaultNavigationTimeout(this.#deps.config.navigationTimeoutMs);
     context.on('close', () => this.#onContextClosed(session, context));
     context.on('page', (page) => this.#adoptPage(session, page));
-    for (const page of context.pages()) session.pages.register(page);
+    session.network.attach(context, (page) => session.pages.idOf(page));
+    for (const page of context.pages()) await this.#track(session, session.pages.register(page));
     session.status = 'running';
     log.info('session started', { headless: session.headless, restarts: session.restarts });
   }
 
   #adoptPage(session: Session, page: Page): void {
     // Pages the site opens itself (window.open, target=_blank) are tracked with their opener.
-    void page.opener().then((opener) => {
-      const openerId = opener ? session.pages.idOf(opener) : null;
-      session.pages.register(page, openerId);
-    }).catch(() => session.pages.register(page));
+    void page.opener()
+      .then((opener) => session.pages.register(page, opener ? session.pages.idOf(opener) : null))
+      .catch(() => session.pages.register(page))
+      .then((entry) => this.#track(session, entry))
+      .catch((e) => this.#log(session).warn('could not record history for adopted page', { error: e }));
+  }
+
+  /** Start history recording for a page (idempotent). Must finish before NCrawl navigates the page. */
+  async #track(session: Session, entry: PageEntry): Promise<HistoryRecorder> {
+    let rec = session.histories.get(entry.id);
+    if (!rec) {
+      // Registered synchronously so a concurrent caller (newPage + context 'page' event) reuses it.
+      rec = new HistoryRecorder();
+      session.histories.set(entry.id, rec);
+      void rec.bind(entry.page);
+    }
+    await rec.whenBound();
+    return rec;
+  }
+
+  async #withInitiator<T>(session: Session, pageId: string, initiator: NavigationInitiator, op: () => Promise<T>): Promise<T> {
+    const rec = session.histories.get(pageId);
+    rec?.begin(initiator);
+    try {
+      return await op();
+    } finally {
+      rec?.end();
+    }
   }
 
   #onContextClosed(session: Session, context: BrowserContext): void {
@@ -194,6 +236,7 @@ export class SessionManager {
     if (session.kind === 'persistent') session.releaseProfile = await this.#deps.profiles.acquire(session.projectId!);
     session.pages.clear();
     session.pages = new PageRegistry((entry) => this.#log(session).warn('page crashed', { pageId: entry.id }));
+    session.histories.clear();
     session.endedAt = null;
     session.endReason = null;
     session.restarts++;
@@ -247,10 +290,11 @@ export class SessionManager {
     const session = this.#running(sessionId);
     const page = await session.context!.newPage();
     const entry = session.pages.register(page);
+    await this.#track(session, entry);
     let navigation: NavigationResult | null = null;
     if (url !== undefined) {
       try {
-        navigation = await navigate(page, url, this.#navDeps(session), opts);
+        navigation = await this.#withInitiator(session, entry.id, 'ncrawl:navigate', () => navigate(page, url, this.#navDeps(session), opts));
       } catch (e) {
         await page.close().catch(() => {});
         throw e;
@@ -264,6 +308,7 @@ export class SessionManager {
     const entry = session.pages.get(pageId);
     entry.status = 'closed';
     await entry.page.close().catch(() => {});
+    await session.histories.get(pageId)?.detach();
   }
 
   listPages(sessionId: string): PageInfo[] {
@@ -275,22 +320,23 @@ export class SessionManager {
     if (!parsed.success) throw invalid(parsed.error);
     const { url, ...opts } = parsed.data;
     const { session, entry } = this.#usablePage(sessionId, pageId);
-    return navigate(entry.page, url, this.#navDeps(session), stripUndefined(opts) as NavigateOptions);
+    return this.#withInitiator(session, pageId, 'ncrawl:navigate', () =>
+      navigate(entry.page, url, this.#navDeps(session), stripUndefined(opts) as NavigateOptions));
   }
 
   async goBack(sessionId: string, pageId: string, opts: NavigateOptions = {}): Promise<NavigationResult> {
     const { session, entry } = this.#usablePage(sessionId, pageId);
-    return traverseHistory(entry.page, 'back', this.#navDeps(session), opts);
+    return this.#withInitiator(session, pageId, 'ncrawl:back', () => traverseHistory(entry.page, 'back', this.#navDeps(session), opts));
   }
 
   async goForward(sessionId: string, pageId: string, opts: NavigateOptions = {}): Promise<NavigationResult> {
     const { session, entry } = this.#usablePage(sessionId, pageId);
-    return traverseHistory(entry.page, 'forward', this.#navDeps(session), opts);
+    return this.#withInitiator(session, pageId, 'ncrawl:forward', () => traverseHistory(entry.page, 'forward', this.#navDeps(session), opts));
   }
 
   async reload(sessionId: string, pageId: string, opts: NavigateOptions = {}): Promise<NavigationResult> {
     const { session, entry } = this.#usablePage(sessionId, pageId);
-    return reload(entry.page, this.#navDeps(session), opts);
+    return this.#withInitiator(session, pageId, 'ncrawl:reload', () => reload(entry.page, this.#navDeps(session), opts));
   }
 
   /** Replace a crashed page with a new tab at its last URL, keeping the page ID. */
@@ -304,17 +350,35 @@ export class SessionManager {
     await entry.page.close().catch(() => {});
     const fresh = await session.context!.newPage();
     session.pages.replace(entry, fresh);
+    const history = await this.#track(session, entry);
+    await history.bind(fresh); // keep earlier entries, follow the new tab
     let navigation: NavigationResult | null = null;
-    if (/^https?:/i.test(lastUrl)) navigation = await navigate(fresh, lastUrl, this.#navDeps(session), opts);
+    if (/^https?:/i.test(lastUrl)) {
+      navigation = await this.#withInitiator(session, pageId, 'ncrawl:recover', () => navigate(fresh, lastUrl, this.#navDeps(session), opts));
+    }
     return { page: toInfo(entry), navigation };
   }
 
-  /**
-   * Escape hatch for the inspection engine (Phase 2). Not for API exposure:
-   * callers outside this package must go through typed operations.
-   */
+  /** Raw Playwright page, for tests and in-package tooling only. Never expose through the API. */
   pageHandle(sessionId: string, pageId: string): Page {
     return this.#usablePage(sessionId, pageId).entry.page;
+  }
+
+  /** Everything the inspection engine needs for one usable page. */
+  async inspectionTarget(sessionId: string, pageId: string): Promise<InspectionTarget> {
+    const { session, entry } = this.#usablePage(sessionId, pageId);
+    const history = await this.#track(session, entry);
+    return { sessionId, projectId: session.projectId, pageId, page: entry.page, history, network: session.network };
+  }
+
+  getNavigationHistory(sessionId: string, pageId: string, sinceSeq = 0): HistoryEntry[] {
+    const session = this.#get(sessionId);
+    session.pages.get(pageId);
+    return session.histories.get(pageId)?.entries(sinceSeq) ?? [];
+  }
+
+  getNetworkMetadata(sessionId: string, query: NetworkQuery = {}): { records: NetworkRecord[]; droppedRecords: number } {
+    return this.#get(sessionId).network.query(query);
   }
 
   // ------------------------------------------------------------------ helpers
