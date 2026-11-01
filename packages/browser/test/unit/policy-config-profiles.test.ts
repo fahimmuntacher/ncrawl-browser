@@ -32,6 +32,18 @@ test('config: defaults, parsing and validation', () => {
   assert.throws(() => loadConfig({ NCRAWL_HEADLESS: 'yes' }), /NCRAWL_HEADLESS/);
 });
 
+test('config: API is loopback-only; token length and origins are validated', () => {
+  const c = loadConfig({});
+  assert.deepEqual(c.api, { host: '127.0.0.1', port: 4700, token: undefined, allowedOrigins: [] });
+  for (const host of ['0.0.0.0', '192.168.1.10', '::', 'example.com']) {
+    assert.throws(() => loadConfig({ NCRAWL_API_HOST: host }), /NCRAWL_API_HOST/, host);
+  }
+  assert.throws(() => loadConfig({ NCRAWL_API_TOKEN: 'short' }), /NCRAWL_API_TOKEN/);
+  assert.deepEqual(loadConfig({ NCRAWL_API_ALLOWED_ORIGINS: 'http://localhost:3000/, https://dash.example.com/path' }).api.allowedOrigins,
+    ['http://localhost:3000', 'https://dash.example.com']);
+  assert.throws(() => loadConfig({ NCRAWL_API_ALLOWED_ORIGINS: 'file:///x' }), /must be http/);
+});
+
 test('profiles: create, list, isolation of paths, delete, invalid IDs', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'ncrawl-prof-'));
   try {

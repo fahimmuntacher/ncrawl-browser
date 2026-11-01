@@ -3,6 +3,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { parseArgs } from 'node:util';
 import { loadConfig } from './config.ts';
 import { isNcrawlError } from './errors.ts';
+import { startApiServer } from './api/server.ts';
 import { createRuntime } from './index.ts';
 
 const USAGE = `ncrawl-browser <command>
@@ -19,6 +20,9 @@ const USAGE = `ncrawl-browser <command>
                               (metadata, DOM, accessibility tree, interactive elements, links, screenshot,
                               network metadata). Prints a summary and the saved file paths.
                               Add --full-page for a full-page screenshot, --headless to run without a window.
+
+  serve                       Start the local HTTP API and control UI on 127.0.0.1 (NCRAWL_API_PORT, default 4700).
+                              Prints the UI link with its access token. Ctrl+C stops every session and exits.
 
 Configuration comes from NCRAWL_* environment variables (see .env.example).`;
 
@@ -72,6 +76,25 @@ async function main(argv: string[]): Promise<number> {
       } finally {
         await rt.sessions.closeSession(session.sessionId);
       }
+    }
+
+    if (cmd === 'serve') {
+      const api = await startApiServer(rt);
+      console.log(`NCrawl Browser API: ${api.url}/v1`);
+      console.log(`Control UI:         ${api.url}/ui#token=${api.token}`);
+      console.log(api.tokenFile ? `API token file:     ${api.tokenFile}` : 'API token:          from NCRAWL_API_TOKEN');
+      console.log('Press Ctrl+C to stop all sessions and exit.');
+      await new Promise<void>((resolve) => {
+        process.removeAllListeners('SIGINT');
+        process.removeAllListeners('SIGTERM');
+        const quit = () => resolve();
+        process.once('SIGINT', quit);
+        process.once('SIGTERM', quit);
+      });
+      console.error('Stopping…');
+      await rt.sessions.stopAll();
+      await api.close();
+      return 0;
     }
 
     if (cmd === 'inspect' && sub && arg) {

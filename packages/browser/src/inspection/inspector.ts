@@ -71,39 +71,37 @@ export class Inspector {
     this.#d = deps;
   }
 
-  async getPageMetadata(sessionId: string, pageId: string): Promise<PageMetadata> {
-    const t = await this.#d.sessions.inspectionTarget(sessionId, pageId);
-    return collectPageMetadata(t.page);
+  getPageMetadata(sessionId: string, pageId: string): Promise<PageMetadata> {
+    return this.#d.sessions.runOnPage(sessionId, pageId, (t) => collectPageMetadata(t.page));
   }
 
-  async getDomSnapshot(sessionId: string, pageId: string, opts?: DomSnapshotOptions): Promise<DomSnapshot> {
-    const t = await this.#d.sessions.inspectionTarget(sessionId, pageId);
-    return collectDomSnapshot(t.page, opts);
+  getDomSnapshot(sessionId: string, pageId: string, opts?: DomSnapshotOptions): Promise<DomSnapshot> {
+    return this.#d.sessions.runOnPage(sessionId, pageId, (t) => collectDomSnapshot(t.page, opts));
   }
 
-  async getAccessibilitySnapshot(sessionId: string, pageId: string, opts?: { maxNodes?: number }): Promise<AccessibilitySnapshot> {
-    const t = await this.#d.sessions.inspectionTarget(sessionId, pageId);
-    return buildAccessibilitySnapshot(await fetchRawAxTree(t.page), opts);
+  getAccessibilitySnapshot(sessionId: string, pageId: string, opts?: { maxNodes?: number }): Promise<AccessibilitySnapshot> {
+    return this.#d.sessions.runOnPage(sessionId, pageId, async (t) => buildAccessibilitySnapshot(await fetchRawAxTree(t.page), opts));
   }
 
-  async getInteractiveElements(sessionId: string, pageId: string, opts?: { maxElements?: number }): Promise<InteractiveResult> {
-    const t = await this.#d.sessions.inspectionTarget(sessionId, pageId);
-    return collectInteractive(t.page, await fetchRawAxTree(t.page), opts);
+  getInteractiveElements(sessionId: string, pageId: string, opts?: { maxElements?: number }): Promise<InteractiveResult> {
+    return this.#d.sessions.runOnPage(sessionId, pageId, async (t) => collectInteractive(t.page, await fetchRawAxTree(t.page), opts));
   }
 
-  async captureScreenshot(sessionId: string, pageId: string, opts?: ScreenshotOptions): Promise<ScreenshotInfo> {
-    const t = await this.#d.sessions.inspectionTarget(sessionId, pageId);
-    return captureScreenshot(t.page, this.#d.captures, t, opts);
+  captureScreenshot(sessionId: string, pageId: string, opts?: ScreenshotOptions): Promise<ScreenshotInfo> {
+    return this.#d.sessions.runOnPage(sessionId, pageId, (t) => captureScreenshot(t.page, this.#d.captures, t, opts));
   }
 
-  async waitForStable(sessionId: string, pageId: string, opts?: StabilityOptions): Promise<StabilityResult> {
-    const t = await this.#d.sessions.inspectionTarget(sessionId, pageId);
-    return waitForStable(t.page, t.network, t.pageId, opts);
+  waitForStable(sessionId: string, pageId: string, opts?: StabilityOptions): Promise<StabilityResult> {
+    return this.#d.sessions.runOnPage(sessionId, pageId, (t) => waitForStable(t.page, t.network, t.pageId, opts));
   }
 
   /** Collect everything about the current page in one consistent observation. */
-  async inspectPage(sessionId: string, pageId: string, opts: InspectOptions = {}): Promise<PageObservation> {
-    const t = await this.#d.sessions.inspectionTarget(sessionId, pageId);
+  inspectPage(sessionId: string, pageId: string, opts: InspectOptions = {}): Promise<PageObservation> {
+    return this.#d.sessions.runOnPage(sessionId, pageId, (t) => this.#inspect(t, opts));
+  }
+
+  async #inspect(t: InspectionTarget, opts: InspectOptions): Promise<PageObservation> {
+    const { sessionId, pageId } = t;
     const log = this.#d.logger.child({ sessionId, pageId });
     const inc = { dom: true, accessibility: true, interactive: true, network: true, ...opts.include };
     const obs: PageObservation = {

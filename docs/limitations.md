@@ -1,4 +1,4 @@
-# Known Limitations (as of Phase 2)
+# Known Limitations (as of Phase 3)
 
 Each item is either verified by a test or stated as untested.
 
@@ -53,16 +53,32 @@ Each item is either verified by a test or stated as untested.
 - Chromium reports going **back** to a `pushState` entry as `navigationType:
   "fragment"`; use the history entry's `initiator` to know what caused it.
 
+## Local API and UI (Phase 3)
+- **Single user, single process.** One token grants full control; there are no
+  roles. Anyone who can read `<dataDir>/api-token` (same OS user) can drive the
+  logged-in browser. Sessions live in memory and end when the service exits.
+- **Stopped/closed sessions disappear** from `GET /sessions`; their captures stay
+  on disk and remain readable via `/captures`.
+- **Pause does not freeze the page.** It refuses new automated operations; the
+  site's own scripts keep running and the person can keep using the window.
+- **Stop releases callers at once, but closing Chromium can take up to 15 s**
+  if the browser is wedged.
+- The control UI is a functional tool, not a product UI: no pagination, plain
+  JSON output, polling refresh every 5 s (paused while you type).
+- No HTTPS: the API is loopback-only plain HTTP by design.
+
 ## Testing scope
 - Tested: static server pages, a framework-free SPA with `pushState` routing,
   3-level collapsible menus, 21 SPA + 3 static routes, manual-login persistence,
   profile isolation, renderer crash, browser-process kill, timeouts, retries,
   headed launch on Linux/Wayland; secret non-leakage (typed values, passwords,
   bearer header, query tokens) across observations and logs; locator hints
-  resolving to the reported element; ID stability across reloads.
+  resolving to the reported element; ID stability across reloads; API token,
+  Host/Origin checks, CORS, body limits, path traversal on capture files,
+  pause/resume, PAGE_BUSY, stop during a slow navigation, stop-all, and the UI
+  driving a session end to end.
 - **Not yet tested:** real React and Next.js applications (planned for Phase 5),
   Windows and macOS hosts, Docker.
 
 ## Not implemented yet (by phase)
-- Phase 3: local HTTP API, pause/resume/stop controls.
 - Phase 4: FastAPI/dashboard/agent integration contracts.

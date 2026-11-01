@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NCrawl Browser Control</title>
+  <link rel="stylesheet" href="/ui/app.css">
+</head>
+<body>
+  <header>
+    <h1>NCrawl Browser</h1>
+    <span id="status" class="muted">connecting…</span>
+    <button id="stop-all" class="danger" title="Stop every session immediately">Stop all</button>
+  </header>
+
+  <p id="token-missing" class="error" hidden>
+    No API token. Open the link printed by <code>ncrawl-browser serve</code> (it ends with <code>#token=…</code>).
+  </p>
+
+  <main>
+    <section>
+      <h2>Profiles</h2>
+      <form id="profile-form">
+        <input name="projectId" placeholder="project-id" required pattern="[a-z0-9]([a-z0-9\-]{0,62}[a-z0-9])?">
+        <input name="displayName" placeholder="Display name (optional)">
+        <button>Create</button>
+      </form>
+      <ul id="profiles" class="list"></ul>
+    </section>
+
+    <section>
+      <h2>Sessions</h2>
+      <form id="session-form">
+        <select name="kind"><option value="persistent">persistent (project profile)</option><option value="ephemeral">ephemeral</option></select>
+        <select name="projectId" id="session-project"></select>
+        <label><input type="checkbox" name="headless"> headless</label>
+        <button>Launch browser</button>
+      </form>
+      <ul id="sessions" class="list"></ul>
+    </section>
+
+    <section id="session-detail" hidden>
+      <h2>Session <code id="sel-session"></code></h2>
+      <form id="open-form">
+        <input name="url" type="url" placeholder="https://app.example.com/" required size="50">
+        <button>Open in new tab</button>
+      </form>
+      <ul id="pages" class="list"></ul>
+      <h3>Captures</h3>
+      <ul id="captures" class="list"></ul>
+    </section>
+
+    <section id="output-section">
+      <h2>Result</h2>
+      <img id="shot" alt="" hidden>
+      <pre id="output" class="muted">Results of the last action appear here.</pre>
+    </section>
+  </main>
+  <script src="/ui/app.js" type="module"></script>
+</body>
+</html>

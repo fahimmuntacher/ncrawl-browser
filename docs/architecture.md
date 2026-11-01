@@ -10,7 +10,8 @@ flowchart LR
   end
 
   subgraph NB["NCrawl Browser service (Node.js, 127.0.0.1 only)"]
-    HTTP[Local HTTP API<br/>typed schemas · Phase 3]
+    HTTP[Local HTTP API + control UI<br/>token · host/origin checks · typed schemas]
+    GATE[Operation gate<br/>pause · resume · stop · one op per page]
     SM[Session manager<br/>lifecycle · crash detection · restart]
     PS[Profile store<br/>per-project userDataDir · lock]
     PR[Page registry]
@@ -29,6 +30,8 @@ flowchart LR
   AGENT --> HTTP
   CLI --> SM
   HTTP --> SM
+  SM --> GATE
+  GATE --> PR
   SM --> PS
   SM --> PR
   PR --> NAV
@@ -75,4 +78,11 @@ Module layout (`packages/browser/src`):
 | `inspection/screenshot.ts` | Viewport / full-page / custom-viewport captures tied to a history position |
 | `inspection/inspector.ts` | One `PageObservation` combining all parts; partial results on part failure |
 | `storage/capture-store.ts` | `captures/<project>/<session>/NNNN_<slug>.{png,screenshot.json,observation.json}` |
-| `cli.ts` | Manual login, checks, one-shot inspection |
+| `runtime/operation-gate.ts` | Pause/resume/stop state, per-page busy lock, immediate release on stop |
+| `api/security.ts` | Token file, Host/Origin checks, constant-time token compare |
+| `api/http.ts` | Response envelope, error → HTTP status, JSON body reader, router |
+| `api/schemas.ts` | Strict request schemas for HTTP bodies and query strings |
+| `api/routes.ts` | Route table; each route names its API operation |
+| `api/server.ts` | `node:http` server, CORS for allow-listed origins, UI assets |
+| `api/ui/*` | Minimal control UI (vanilla JS, strict CSP) |
+| `cli.ts` | Manual login, checks, one-shot inspection, `serve` |

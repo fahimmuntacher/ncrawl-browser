@@ -10,6 +10,7 @@ uses to open, inspect and capture the applications you are allowed to inspect.
 | `packages/mock-erp` | Local mock ERP (login, nested sidebar, 24 routes) used by tests |
 
 Design and decisions: [`docs/architecture.md`](docs/architecture.md),
+[`docs/api.md`](docs/api.md),
 [`docs/adr/0001-browser-runtime.md`](docs/adr/0001-browser-runtime.md),
 [research](docs/research/open-source-evaluation.md),
 [licenses](docs/research/license-compatibility.md),
@@ -48,7 +49,13 @@ node src/cli.ts inspect acme-erp https://erp.example.com/dashboard --full-page
 
 node src/cli.ts profile list
 node src/cli.ts profile delete acme-erp
+
+# Local HTTP API + minimal control UI (prints a link with the access token).
+node src/cli.ts serve
 ```
+
+The API reference — operations, error codes, pause/resume/stop — is in
+[`docs/api.md`](docs/api.md).
 
 Try it against the mock ERP (credentials `demo` / `demo`):
 ```bash
@@ -64,7 +71,9 @@ NCRAWL_TEST_HEADED=1 npm test                # also runs the visible-window test
 ```
 
 ## Safety boundaries
-NCrawl Browser opens only `http(s)` URLs, can be restricted to exact origins per
+The API listens on loopback only and requires a bearer token, a matching Host
+header and an allow-listed Origin for browser callers. Every session has
+pause/resume/stop and there is a global stop. NCrawl Browser opens only `http(s)` URLs, can be restricted to exact origins per
 session, never exports or logs cookies/tokens/passwords (URLs and logs are
 redacted), and contains no stealth, fingerprint-spoofing, proxy-rotation or
 CAPTCHA-bypass code. Only use it on applications you own or are authorized to inspect.

@@ -18,6 +18,10 @@ export type { AccessibilitySnapshot, AxNode } from './inspection/accessibility.t
 export type { InteractiveElement, NavigationLink, ExpandableGroup, Risk, Region } from './inspection/interactive.ts';
 export type { ScreenshotInfo, CaptureMode } from './inspection/screenshot.ts';
 export type { StabilityResult } from './inspection/stability.ts';
+export type { ControlState } from './runtime/operation-gate.ts';
+export { startApiServer, type ApiServer } from './api/server.ts';
+export { API_VERSION } from './api/routes.ts';
+export type { ApiResponse } from './api/http.ts';
 
 import type { BrowserConfig } from './config.ts';
 import { createLogger, type Logger } from './logger.ts';

@@ -15,6 +15,13 @@ const EnvSchema = z.object({
   NCRAWL_VIEWPORT_WIDTH: z.coerce.number().int().min(320).max(7_680).default(1440),
   NCRAWL_VIEWPORT_HEIGHT: z.coerce.number().int().min(240).max(4_320).default(900),
   NCRAWL_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  /** Loopback only: the API drives a logged-in browser and must never be reachable from the network. */
+  NCRAWL_API_HOST: z.enum(['127.0.0.1', '::1', 'localhost']).default('127.0.0.1'),
+  NCRAWL_API_PORT: z.coerce.number().int().min(0).max(65_535).default(4700),
+  /** Fixed API token (>= 32 chars). Unset = generated once and stored in <dataDir>/api-token (mode 0600). */
+  NCRAWL_API_TOKEN: z.string().min(32).optional(),
+  /** Comma-separated browser origins allowed to call the API (e.g. the NCrawl dashboard). */
+  NCRAWL_API_ALLOWED_ORIGINS: z.string().default(''),
 });
 
 export interface BrowserConfig {
@@ -25,6 +32,12 @@ export interface BrowserConfig {
   navigationRetries: number;
   viewport: { width: number; height: number };
   logLevel: 'debug' | 'info' | 'warn' | 'error';
+  api: {
+    host: '127.0.0.1' | '::1' | 'localhost';
+    port: number;
+    token: string | undefined;
+    allowedOrigins: string[];
+  };
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): BrowserConfig {
@@ -42,5 +55,26 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): BrowserConfig 
     navigationRetries: e.NCRAWL_NAV_RETRIES,
     viewport: { width: e.NCRAWL_VIEWPORT_WIDTH, height: e.NCRAWL_VIEWPORT_HEIGHT },
     logLevel: e.NCRAWL_LOG_LEVEL,
+    api: {
+      host: e.NCRAWL_API_HOST,
+      port: e.NCRAWL_API_PORT,
+      token: e.NCRAWL_API_TOKEN,
+      allowedOrigins: parseOrigins(e.NCRAWL_API_ALLOWED_ORIGINS),
+    },
   };
+}
+
+function parseOrigins(raw: string): string[] {
+  return raw.split(',').map((o) => o.trim()).filter(Boolean).map((o) => {
+    let u: URL;
+    try {
+      u = new URL(o);
+    } catch {
+      throw new Error(`Invalid NCrawl Browser configuration: NCRAWL_API_ALLOWED_ORIGINS: not a URL: ${o}`);
+    }
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+      throw new Error(`Invalid NCrawl Browser configuration: NCRAWL_API_ALLOWED_ORIGINS: must be http(s): ${o}`);
+    }
+    return u.origin;
+  });
 }
