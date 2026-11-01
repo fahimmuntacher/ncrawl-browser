@@ -11,6 +11,7 @@ uses to open, inspect and capture the applications you are allowed to inspect.
 
 Design and decisions: [`docs/architecture.md`](docs/architecture.md),
 [`docs/api.md`](docs/api.md),
+[`docs/integration.md`](docs/integration.md) (dashboard, FastAPI, agents/MCP, extension; contracts in [`docs/contracts/`](docs/contracts/)),
 [`docs/adr/0001-browser-runtime.md`](docs/adr/0001-browser-runtime.md),
 [research](docs/research/open-source-evaluation.md),
 [licenses](docs/research/license-compatibility.md),
@@ -62,6 +63,12 @@ Try it against the mock ERP (credentials `demo` / `demo`):
 npm run start -w @ncrawl/mock-erp           # http://127.0.0.1:4600
 node packages/browser/src/cli.ts login demo http://127.0.0.1:4600/app
 ```
+
+## Integration
+- Typed client for the dashboard: `@ncrawl/browser/client`
+- Sync payloads + mapping for the FastAPI backend: `@ncrawl/browser/contracts`
+- AI agents (Hermes, Claude, …): MCP adapter `node packages/browser/src/mcp/server.ts`
+- Regenerate published contracts after API changes: `npm run contracts`
 
 ## Test
 ```bash

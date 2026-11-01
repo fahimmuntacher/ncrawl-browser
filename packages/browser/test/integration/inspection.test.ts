@@ -270,6 +270,32 @@ describe('network metadata', () => {
     assert.equal(reqs.filter((r) => r.isNavigation).length, 1, 'scoped to the current document');
   });
 
+  test('requests abandoned by a navigation are marked cancelled and do not block stability (regression)', async () => {
+    await goto('/static/help');
+    // A fetch that is still running when the page navigates away never gets a completion event from Chromium.
+    await page.evaluate((u) => { void fetch(u).catch(() => {}); }, `${h.erp.url}/slow?ms=4000&tag=abandoned`);
+    await new Promise((r) => setTimeout(r, 200));
+    await h.sessions.navigate(sessionId, pageId, { url: `${h.erp.url}/static/about` });
+    const t0 = Date.now();
+    const st = await h.inspector.waitForStable(sessionId, pageId);
+    assert.equal(st.stable, true, JSON.stringify(st));
+    assert.ok(Date.now() - t0 < 3000, `stability took ${Date.now() - t0} ms`);
+    const rec = h.sessions.getNetworkMetadata(sessionId, { pageId }).records.find((r) => r.url.includes('tag=abandoned'))!;
+    assert.equal(rec.state, 'cancelled');
+    assert.match(rec.failure!, /superseded/);
+  });
+
+  test('a long-running request (long-polling) stops blocking stability after longRequestMs', async () => {
+    await goto('/static/changelog');
+    await page.evaluate((u) => { void fetch(u).catch(() => {}); }, `${h.erp.url}/slow?ms=8000&tag=longpoll`);
+    const t0 = Date.now();
+    const st = await h.inspector.waitForStable(sessionId, pageId, { longRequestMs: 1000 });
+    const took = Date.now() - t0;
+    assert.equal(st.stable, true, JSON.stringify(st));
+    assert.ok(took >= 900 && took < 4000, `took ${took} ms`);
+    await goto('/static/help'); // cancels the long poll
+  });
+
   test('after an SPA route change, only that route\'s requests are attributed to the page', async () => {
     await goto('/app');
     await h.inspector.waitForStable(sessionId, pageId);

@@ -22,6 +22,8 @@ const EnvSchema = z.object({
   NCRAWL_API_TOKEN: z.string().min(32).optional(),
   /** Comma-separated browser origins allowed to call the API (e.g. the NCrawl dashboard). */
   NCRAWL_API_ALLOWED_ORIGINS: z.string().default(''),
+  /** Development/testing: validate every API response against its contract schema (500 on mismatch). */
+  NCRAWL_API_VALIDATE_RESPONSES: boolFromEnv.default(false),
 });
 
 export interface BrowserConfig {
@@ -37,6 +39,7 @@ export interface BrowserConfig {
     port: number;
     token: string | undefined;
     allowedOrigins: string[];
+    validateResponses: boolean;
   };
 }
 
@@ -60,6 +63,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): BrowserConfig 
       port: e.NCRAWL_API_PORT,
       token: e.NCRAWL_API_TOKEN,
       allowedOrigins: parseOrigins(e.NCRAWL_API_ALLOWED_ORIGINS),
+      validateResponses: e.NCRAWL_API_VALIDATE_RESPONSES,
     },
   };
 }

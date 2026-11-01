@@ -1,4 +1,4 @@
-# Known Limitations (as of Phase 3)
+# Known Limitations (as of Phase 4)
 
 Each item is either verified by a test or stated as untested.
 
@@ -67,6 +67,24 @@ Each item is either verified by a test or stated as untested.
   JSON output, polling refresh every 5 s (paused while you type).
 - No HTTPS: the API is loopback-only plain HTTP by design.
 
+## Integration contracts (Phase 4)
+- **The OpenAPI document was not checked with an external validator** in this
+  environment; structure is tested (every route once, unique operationIds, all
+  `$ref`s resolve, auth flags). Run `npx @redocly/cli lint docs/contracts/openapi.json`
+  to validate it independently.
+- **Not exercised against real consumers yet**: no FastAPI app, Pydantic
+  generation, Next.js build (`transpilePackages`) or Hermes configuration has
+  been run. The TypeScript client and MCP adapter are tested against the live API.
+- **MCP adapter** implements the stdio transport and `initialize`, `ping`,
+  `tools/list`, `tools/call` only (no resources, prompts, cancellation or
+  progress). Agents get no way to click, type or expand menus, so they can only
+  reach pages through URLs and visible links.
+- **Edges come from links present on observed pages.** A menu item revealed only
+  after expanding a group yields an edge only if the group was expanded when the
+  source page was observed (discovery/crawl orchestration is future work).
+- `toPageNode` sets `status` to `captured` for partial observations; the first
+  error is recorded in `error_code`/`error_message`.
+
 ## Testing scope
 - Tested: static server pages, a framework-free SPA with `pushState` routing,
   3-level collapsible menus, 21 SPA + 3 static routes, manual-login persistence,
@@ -76,9 +94,14 @@ Each item is either verified by a test or stated as untested.
   resolving to the reported element; ID stability across reloads; API token,
   Host/Origin checks, CORS, body limits, path traversal on capture files,
   pause/resume, PAGE_BUSY, stop during a slow navigation, stop-all, and the UI
-  driving a session end to end.
+  driving a session end to end; contract drift (files, compile-time types,
+  runtime response validation), typed client, sync mapping from real
+  observations, MCP adapter as a subprocess; abandoned-request and long-poll
+  stability regressions.
 - **Not yet tested:** real React and Next.js applications (planned for Phase 5),
   Windows and macOS hosts, Docker.
 
 ## Not implemented yet (by phase)
-- Phase 4: FastAPI/dashboard/agent integration contracts.
+- Not yet built: crawl orchestration (route discovery → user review → sequential
+  crawl), the dashboard, the FastAPI backend, exports (PDF/PNG/ZIP). Phase 5 is
+  testing and reliability on real React/Next.js apps.

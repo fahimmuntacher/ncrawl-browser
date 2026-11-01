@@ -7,6 +7,7 @@ flowchart LR
     API[FastAPI backend]
     AGENT[AI agents: Hermes / Claude / ...]
     CLI[ncrawl-browser CLI]
+    MCPA[MCP adapter<br/>for agents]
   end
 
   subgraph NB["NCrawl Browser service (Node.js, 127.0.0.1 only)"]
@@ -27,7 +28,8 @@ flowchart LR
 
   DASH --> HTTP
   API --> HTTP
-  AGENT --> HTTP
+  AGENT --> MCPA
+  MCPA --> HTTP
   CLI --> SM
   HTTP --> SM
   SM --> GATE
@@ -85,4 +87,11 @@ Module layout (`packages/browser/src`):
 | `api/routes.ts` | Route table; each route names its API operation |
 | `api/server.ts` | `node:http` server, CORS for allow-listed origins, UI assets |
 | `api/ui/*` | Minimal control UI (vanilla JS, strict CSP) |
+| `contracts/responses.ts` | Strict response schemas (the API contract) |
+| `contracts/type-checks.ts` | Compile-time proof that schemas equal the code's types |
+| `contracts/openapi.ts` | OpenAPI 3.1 built from the route table |
+| `contracts/sync.ts` | PRD sync payloads (snake_case), UUIDv5 IDs, `toPageNode`, `deriveEdges` |
+| `contracts/generate.ts` | Writes/checks `docs/contracts/*` |
+| `client/index.ts` | Runtime-neutral typed HTTP client (dashboard, extension) |
+| `mcp/server.ts` | MCP stdio adapter for AI agents (no click/type tools) |
 | `cli.ts` | Manual login, checks, one-shot inspection, `serve` |

@@ -68,10 +68,21 @@ export async function startApiServer(rt: ApiRuntime, opts: { port?: number } = {
       if (asset && req.method === 'GET') return sendFile(res, asset.data, asset.type, UI_HEADERS);
 
       const { route, params } = router.match(req.method ?? 'GET', url.pathname);
-      if (route.op !== 'health') checkToken(req, policy);
+      if (route.op !== 'health' && route.op !== 'get_openapi') checkToken(req, policy);
       const body = req.method === 'POST' || req.method === 'DELETE' ? await readJson(req) : {};
       const data = await route.handler({ params, query: url.searchParams, body, req, res, responseHeaders });
-      if (data !== undefined) sendOk(res, data, route.status ?? 200, responseHeaders);
+      if (data !== undefined) {
+        if (rt.config.api.validateResponses && route.response) {
+          const check = route.response.safeParse(data);
+          if (!check.success) {
+            log.error('response violates its contract', { op: route.op, issues: check.error.issues.slice(0, 10) });
+            throw new NcrawlError('INTERNAL', `Response of ${route.op} violates its contract`, {
+              details: { op: route.op, issues: check.error.issues.slice(0, 10).map((i) => ({ path: i.path.map(String).join('.'), message: i.message })) },
+            });
+          }
+        }
+        sendOk(res, data, route.status ?? 200, responseHeaders);
+      }
     } catch (e) {
       let err: NcrawlError;
       if (isNcrawlError(e)) {

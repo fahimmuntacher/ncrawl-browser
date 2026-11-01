@@ -1,0 +1,236 @@
+{
+  "server": "ncrawl-browser",
+  "transport": "stdio",
+  "tools": [
+    {
+      "name": "ncrawl_status",
+      "description": "Service status: running/paused sessions and profile count.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ncrawl_list_profiles",
+      "description": "List project profiles (each keeps the user's own logins for one application).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ncrawl_list_sessions",
+      "description": "List browser sessions with their pages (tabs), status and pause state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ncrawl_open_session",
+      "description": "Launch a browser session. With projectId it uses that project's saved profile (logins the user made); without, a fresh ephemeral one. Returns sessionId and the pageId of a ready tab.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "description": "Existing profile ID; omit for an ephemeral session",
+            "type": "string"
+          },
+          "headless": {
+            "description": "Default: service setting (usually visible)",
+            "type": "boolean"
+          },
+          "allowedOrigins": {
+            "description": "Restrict navigation to these origins",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ncrawl_navigate",
+      "description": "Navigate a tab to an http(s) URL. Returns final URL, HTTP status and title (redirects to login pages are reported, not followed further).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "Session ID (ses_...)"
+          },
+          "pageId": {
+            "type": "string",
+            "description": "Page ID (pg_...)"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sessionId",
+          "pageId",
+          "url"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ncrawl_go_back",
+      "description": "Go back one step in the tab's history.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "Session ID (ses_...)"
+          },
+          "pageId": {
+            "type": "string",
+            "description": "Page ID (pg_...)"
+          }
+        },
+        "required": [
+          "sessionId",
+          "pageId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ncrawl_inspect_page",
+      "description": "Inspect the current page: title, URL, headings, navigation links (with menu path and region), collapsed menu groups, accessibility outline. Saves a screenshot locally. includeScreenshot=true also returns the image to you (it leaves the user's machine).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "Session ID (ses_...)"
+          },
+          "pageId": {
+            "type": "string",
+            "description": "Page ID (pg_...)"
+          },
+          "fullPage": {
+            "type": "boolean"
+          },
+          "includeScreenshot": {
+            "description": "Default false. Sends the screenshot image to the agent.",
+            "type": "boolean"
+          },
+          "maxOutlineChars": {
+            "description": "Default 6000",
+            "type": "integer",
+            "minimum": 200,
+            "maximum": 50000
+          }
+        },
+        "required": [
+          "sessionId",
+          "pageId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ncrawl_get_interactive_elements",
+      "description": "List interactive elements with risk labels (safe, input, form-submit, mutating, logout, external, unknown-action). Informational only: there are no tools to click them.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "Session ID (ses_...)"
+          },
+          "pageId": {
+            "type": "string",
+            "description": "Page ID (pg_...)"
+          },
+          "maxElements": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2000
+          }
+        },
+        "required": [
+          "sessionId",
+          "pageId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ncrawl_pause",
+      "description": "Pause automation in a session (the user can keep using the window).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "Session ID (ses_...)"
+          }
+        },
+        "required": [
+          "sessionId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ncrawl_resume",
+      "description": "Resume a paused session.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "Session ID (ses_...)"
+          }
+        },
+        "required": [
+          "sessionId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ncrawl_stop",
+      "description": "Emergency stop: abort and close the session.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "Session ID (ses_...)"
+          }
+        },
+        "required": [
+          "sessionId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ncrawl_close_session",
+      "description": "Close a session normally.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "Session ID (ses_...)"
+          }
+        },
+        "required": [
+          "sessionId"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

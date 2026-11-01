@@ -12,7 +12,11 @@ export interface NetworkRecord {
   method: string;
   resourceType: string;
   isNavigation: boolean;
-  state: 'pending' | 'finished' | 'failed';
+  /**
+   * cancelled = still pending when its page loaded a new document. Chromium abandons such requests
+   * without a completion or failure event, so without this they would look in-flight forever.
+   */
+  state: 'pending' | 'finished' | 'failed' | 'cancelled';
   status: number | null;
   contentType: string | null;
   startedAt: string;
@@ -31,10 +35,13 @@ export interface NetworkQuery {
 /** Long-lived connections never "finish"; they must not block stability checks. */
 const STREAMING = new Set(['websocket', 'eventsource']);
 
+interface Entry { rec: NetworkRecord; t0: number }
+
 export class NetworkObserver {
   readonly #records: NetworkRecord[] = [];
-  readonly #byRequest = new WeakMap<Request, { rec: NetworkRecord; t0: number }>();
-  readonly #inflight = new Map<string, number>();
+  readonly #byRequest = new WeakMap<Request, Entry>();
+  /** Pending, non-streaming requests per page. */
+  readonly #pending = new Map<string, Set<Entry>>();
   readonly #lastActivity = new Map<string, number>();
   readonly #max: number;
   #seq = 0;
@@ -58,11 +65,17 @@ export class NetworkObserver {
 
   #onRequest(req: Request, pageIdOf: (page: Page) => string | null): void {
     let pageId: string | null = null;
+    let mainFrameNavigation = false;
     try {
-      pageId = pageIdOf(req.frame().page());
+      const frame = req.frame();
+      pageId = pageIdOf(frame.page());
+      mainFrameNavigation = req.isNavigationRequest() && frame.parentFrame() === null;
     } catch {
       // Service-worker requests have no frame.
     }
+    // A new document in the main frame abandons the previous document's outstanding requests.
+    if (pageId && mainFrameNavigation) this.#cancelPending(pageId);
+
     const raw = req.url();
     const rec: NetworkRecord = {
       seq: ++this.#seq,
@@ -78,16 +91,30 @@ export class NetworkObserver {
       durationMs: null,
       failure: null,
     };
-    this.#byRequest.set(req, { rec, t0: performance.now() });
+    const entry: Entry = { rec, t0: performance.now() };
+    this.#byRequest.set(req, entry);
     this.#records.push(rec);
     if (this.#records.length > this.#max) {
       this.#records.shift();
       this.#dropped++;
     }
     if (pageId && !STREAMING.has(rec.resourceType)) {
-      this.#inflight.set(pageId, (this.#inflight.get(pageId) ?? 0) + 1);
+      let set = this.#pending.get(pageId);
+      if (!set) this.#pending.set(pageId, (set = new Set()));
+      set.add(entry);
       this.#lastActivity.set(pageId, Date.now());
     }
+  }
+
+  #cancelPending(pageId: string): void {
+    const set = this.#pending.get(pageId);
+    if (!set) return;
+    for (const entry of set) {
+      entry.rec.state = 'cancelled';
+      entry.rec.failure = 'superseded by a new document before completing';
+      entry.rec.durationMs = Math.round(performance.now() - entry.t0);
+    }
+    set.clear();
   }
 
   #settle(req: Request, state: 'finished' | 'failed', failure: string | null): void {
@@ -97,8 +124,8 @@ export class NetworkObserver {
     rec.state = state;
     rec.failure = failure === null ? null : redactText(failure);
     rec.durationMs = Math.round(performance.now() - t0);
-    if (rec.pageId && !STREAMING.has(rec.resourceType)) {
-      this.#inflight.set(rec.pageId, Math.max(0, (this.#inflight.get(rec.pageId) ?? 1) - 1));
+    if (rec.pageId) {
+      this.#pending.get(rec.pageId)?.delete(entry);
       this.#lastActivity.set(rec.pageId, Date.now());
     }
   }
@@ -117,8 +144,18 @@ export class NetworkObserver {
     return this.#seq;
   }
 
-  inflight(pageId: string): number {
-    return this.#inflight.get(pageId) ?? 0;
+  /**
+   * Requests of this page still in flight. With `ignoreOlderThanMs`, requests running longer than that
+   * (long-polling, stalled beacons) are not counted, so they cannot block stability forever.
+   */
+  inflight(pageId: string, opts: { ignoreOlderThanMs?: number } = {}): number {
+    const set = this.#pending.get(pageId);
+    if (!set) return 0;
+    if (opts.ignoreOlderThanMs === undefined) return set.size;
+    const cutoff = performance.now() - opts.ignoreOlderThanMs;
+    let n = 0;
+    for (const e of set) if (e.t0 >= cutoff) n++;
+    return n;
   }
 
   /** Milliseconds since the last request started or ended on this page (Infinity if none). */

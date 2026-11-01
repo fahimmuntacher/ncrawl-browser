@@ -34,7 +34,7 @@ test('config: defaults, parsing and validation', () => {
 
 test('config: API is loopback-only; token length and origins are validated', () => {
   const c = loadConfig({});
-  assert.deepEqual(c.api, { host: '127.0.0.1', port: 4700, token: undefined, allowedOrigins: [] });
+  assert.deepEqual(c.api, { host: '127.0.0.1', port: 4700, token: undefined, allowedOrigins: [], validateResponses: false });
   for (const host of ['0.0.0.0', '192.168.1.10', '::', 'example.com']) {
     assert.throws(() => loadConfig({ NCRAWL_API_HOST: host }), /NCRAWL_API_HOST/, host);
   }

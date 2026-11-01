@@ -6,6 +6,8 @@ export interface StabilityOptions {
   timeoutMs?: number;
   /** How long the DOM and the network must both be quiet. */
   quietMs?: number;
+  /** Requests running longer than this (long-polling, stalled beacons) do not block stability. Default 5000. */
+  longRequestMs?: number;
 }
 
 export interface StabilityResult {
@@ -17,7 +19,7 @@ export interface StabilityResult {
 
 /**
  * Wait until the page has loaded, its DOM has stopped changing for `quietMs`, and no requests
- * (other than websockets/event streams) are in flight for `quietMs`. A fixed delay alone is never used.
+ * (other than websockets/event streams and requests older than `longRequestMs`) are in flight for `quietMs`. A fixed delay alone is never used.
  * Never throws: an unstable page is still inspected, with `stable: false` recorded as evidence.
  */
 export async function waitForStable(page: Page, network: NetworkObserver, pageId: string, opts: StabilityOptions = {}): Promise<StabilityResult> {
@@ -53,7 +55,7 @@ export async function waitForStable(page: Page, network: NetworkObserver, pageId
         reason = 'timeout-dom-busy';
         break;
       }
-      if (network.inflight(pageId) === 0 && network.idleFor(pageId) >= quietMs) {
+      if (network.inflight(pageId, { ignoreOlderThanMs: opts.longRequestMs ?? 5_000 }) === 0 && network.idleFor(pageId) >= quietMs) {
         await page.evaluate(() => Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1_000))])).catch(() => {});
         return { stable: true, waitedMs: Date.now() - start, reason: 'stable' };
       }

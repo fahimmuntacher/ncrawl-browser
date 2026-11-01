@@ -1,0 +1,4193 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NCrawl Browser API",
+    "version": "1.0.0",
+    "description": "Local, loopback-only API that controls NCrawl Browser sessions (Playwright/Chromium) for authorized inspection. All responses use the envelope { ok: true, data } or { ok: false, error }. Error codes: INVALID_INPUT, URL_NOT_ALLOWED, PROFILE_NOT_FOUND, PROFILE_IN_USE, SESSION_NOT_FOUND, SESSION_NOT_RUNNING, PAGE_NOT_FOUND, PAGE_CRASHED, BROWSER_LAUNCH_FAILED, BROWSER_CRASHED, NAVIGATION_TIMEOUT, NAVIGATION_FAILED, HISTORY_UNAVAILABLE, CAPTURE_FAILED, INSPECTION_FAILED, SESSION_PAUSED, SESSION_STOPPED, PAGE_BUSY, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, UNSUPPORTED_MEDIA_TYPE, PAYLOAD_TOO_LARGE, INTERNAL."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:4700",
+      "description": "Default local service (NCRAWL_API_PORT)"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "service"
+    },
+    {
+      "name": "profiles"
+    },
+    {
+      "name": "sessions"
+    },
+    {
+      "name": "pages"
+    },
+    {
+      "name": "inspection"
+    },
+    {
+      "name": "captures"
+    }
+  ],
+  "paths": {
+    "/v1/openapi.json": {
+      "get": {
+        "operationId": "get_openapi",
+        "summary": "This API as an OpenAPI 3.1 document (no token needed)",
+        "tags": [
+          "service"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {}
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "operationId": "health",
+        "summary": "Liveness check (no token needed)",
+        "tags": [
+          "service"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Health"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/status": {
+      "get": {
+        "operationId": "get_status",
+        "summary": "Service status and session counts",
+        "tags": [
+          "service"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Status"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stop": {
+      "post": {
+        "operationId": "stop_all",
+        "summary": "Emergency stop of every session",
+        "tags": [
+          "service"
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StopAll"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/profiles": {
+      "get": {
+        "operationId": "list_profiles",
+        "summary": "List project profiles",
+        "tags": [
+          "profiles"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ListProfilesResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "create_profile",
+        "summary": "Create a project profile (idempotent)",
+        "tags": [
+          "profiles"
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ProfileInfo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/profiles/{projectId}": {
+      "get": {
+        "operationId": "get_profile",
+        "summary": "Get one profile",
+        "tags": [
+          "profiles"
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ProfileInfo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "delete_profile",
+        "summary": "Delete a profile and its saved logins",
+        "tags": [
+          "profiles"
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Deleted"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions": {
+      "get": {
+        "operationId": "list_sessions",
+        "summary": "List sessions",
+        "tags": [
+          "sessions"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ListSessionsResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "create_browser",
+        "summary": "Launch a browser session (persistent project profile or ephemeral)",
+        "tags": [
+          "sessions"
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SessionInfo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}": {
+      "get": {
+        "operationId": "get_session",
+        "summary": "Get one session",
+        "tags": [
+          "sessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SessionInfo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "close_browser",
+        "summary": "Close a session",
+        "tags": [
+          "sessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SessionInfo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/restart": {
+      "post": {
+        "operationId": "restart_browser",
+        "summary": "Relaunch a disconnected session",
+        "tags": [
+          "sessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SessionInfo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/pause": {
+      "post": {
+        "operationId": "pause",
+        "summary": "Refuse new automated operations",
+        "tags": [
+          "sessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SessionInfo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/resume": {
+      "post": {
+        "operationId": "resume",
+        "summary": "Accept automated operations again",
+        "tags": [
+          "sessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SessionInfo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/stop": {
+      "post": {
+        "operationId": "stop",
+        "summary": "Emergency stop: release callers, close the browser",
+        "tags": [
+          "sessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SessionInfo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/network": {
+      "get": {
+        "operationId": "get_network_metadata",
+        "summary": "Network metadata (no headers or bodies)",
+        "tags": [
+          "sessions"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^pg_[a-f0-9]{16}$"
+            }
+          },
+          {
+            "name": "sinceSeq",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "failedOnly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "resourceTypes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/NetworkQueryResult"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/pages": {
+      "get": {
+        "operationId": "list_pages",
+        "summary": "List pages (tabs)",
+        "tags": [
+          "pages"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ListPagesResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "open_page",
+        "summary": "Open a new tab, optionally at a URL",
+        "tags": [
+          "pages"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenPageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/OpenPageResult"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/pages/{pageId}": {
+      "delete": {
+        "operationId": "close_page",
+        "summary": "Close a tab",
+        "tags": [
+          "pages"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Closed"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/pages/{pageId}/navigate": {
+      "post": {
+        "operationId": "navigate",
+        "summary": "Navigate the tab to a URL",
+        "tags": [
+          "pages"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NavigateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/NavigationResult"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/pages/{pageId}/back": {
+      "post": {
+        "operationId": "go_back",
+        "summary": "Go back in history",
+        "tags": [
+          "pages"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoryNavRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/NavigationResult"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/pages/{pageId}/forward": {
+      "post": {
+        "operationId": "go_forward",
+        "summary": "Go forward in history",
+        "tags": [
+          "pages"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoryNavRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/NavigationResult"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/pages/{pageId}/reload": {
+      "post": {
+        "operationId": "reload",
+        "summary": "Reload the tab",
+        "tags": [
+          "pages"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoryNavRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/NavigationResult"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/pages/{pageId}/recover": {
+      "post": {
+        "operationId": "recover_page",
+        "summary": "Replace a crashed tab, reopening its last URL",
+        "tags": [
+          "pages"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoryNavRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/OpenPageResult"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/pages/{pageId}/history": {
+      "get": {
+        "operationId": "get_navigation_history",
+        "summary": "Main-frame navigations of the tab",
+        "tags": [
+          "pages"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sinceSeq",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GetNavigationHistoryResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/pages/{pageId}/metadata": {
+      "get": {
+        "operationId": "get_page_metadata",
+        "summary": "URL, title, sizes, headings",
+        "tags": [
+          "inspection"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PageMetadata"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/pages/{pageId}/dom": {
+      "get": {
+        "operationId": "get_dom_snapshot",
+        "summary": "Bounded DOM snapshot (never form values)",
+        "tags": [
+          "inspection"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxNodes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50000
+            }
+          },
+          {
+            "name": "maxTextLength",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DomSnapshot"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/pages/{pageId}/accessibility": {
+      "get": {
+        "operationId": "get_accessibility_snapshot",
+        "summary": "Accessibility tree and text outline",
+        "tags": [
+          "inspection"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxNodes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AccessibilitySnapshot"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/pages/{pageId}/interactive-elements": {
+      "get": {
+        "operationId": "get_interactive_elements",
+        "summary": "Interactive elements, navigation links, expandable groups",
+        "tags": [
+          "inspection"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxElements",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/InteractiveResult"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/pages/{pageId}/wait-for-stable": {
+      "post": {
+        "operationId": "wait_for_stable",
+        "summary": "Wait for DOM and network quiet",
+        "tags": [
+          "inspection"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StabilityRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StabilityResult"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/pages/{pageId}/screenshot": {
+      "post": {
+        "operationId": "capture_screenshot",
+        "summary": "Capture a screenshot to the capture store",
+        "tags": [
+          "inspection"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScreenshotRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ScreenshotInfo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{sessionId}/pages/{pageId}/inspect": {
+      "post": {
+        "operationId": "inspect_page",
+        "summary": "Full page observation (saved next to its screenshot)",
+        "tags": [
+          "inspection"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PageObservation"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/captures/{scope}/{sessionId}": {
+      "get": {
+        "operationId": "list_captures",
+        "summary": "List capture files of a session (scope = projectId or _ephemeral)",
+        "tags": [
+          "captures"
+        ],
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ListCapturesResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/captures/{scope}/{sessionId}/{file}": {
+      "get": {
+        "operationId": "get_capture",
+        "summary": "Download a capture file (PNG or JSON)",
+        "tags": [
+          "captures"
+        ],
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File contents",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "default": {
+            "description": "Error (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Token from <NCRAWL_DATA_DIR>/api-token or NCRAWL_API_TOKEN"
+      }
+    },
+    "schemas": {
+      "ProfileInfo": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp"
+          },
+          "lastUsedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "ISO-8601 timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inUse": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "projectId",
+          "displayName",
+          "createdAt",
+          "lastUsedAt",
+          "inUse"
+        ],
+        "additionalProperties": false
+      },
+      "PageInfo": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "crashed",
+              "closed"
+            ]
+          },
+          "url": {
+            "type": "string"
+          },
+          "openerPageId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp"
+          },
+          "crashedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "ISO-8601 timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "pageId",
+          "status",
+          "url",
+          "openerPageId",
+          "createdAt",
+          "crashedAt"
+        ],
+        "additionalProperties": false
+      },
+      "SessionInfo": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "persistent",
+              "ephemeral"
+            ]
+          },
+          "projectId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "starting",
+              "running",
+              "closing",
+              "closed",
+              "disconnected"
+            ]
+          },
+          "headless": {
+            "type": "boolean"
+          },
+          "viewport": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "type": "number"
+              },
+              "height": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "width",
+              "height"
+            ],
+            "additionalProperties": false
+          },
+          "allowedOrigins": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp"
+          },
+          "endedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "ISO-8601 timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "endReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "restarts": {
+            "type": "number"
+          },
+          "control": {
+            "type": "string",
+            "enum": [
+              "active",
+              "paused",
+              "stopping"
+            ]
+          },
+          "pages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PageInfo"
+            }
+          }
+        },
+        "required": [
+          "sessionId",
+          "kind",
+          "projectId",
+          "status",
+          "headless",
+          "viewport",
+          "allowedOrigins",
+          "createdAt",
+          "endedAt",
+          "endReason",
+          "restarts",
+          "control",
+          "pages"
+        ],
+        "additionalProperties": false
+      },
+      "NavigationResult": {
+        "type": "object",
+        "properties": {
+          "requestedUrl": {
+            "type": "string"
+          },
+          "finalUrl": {
+            "type": "string"
+          },
+          "httpStatus": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "attempts": {
+            "type": "number"
+          },
+          "durationMs": {
+            "type": "number"
+          },
+          "redirected": {
+            "type": "boolean"
+          },
+          "leftAllowedOrigins": {
+            "type": "boolean"
+          },
+          "waitUntil": {
+            "type": "string",
+            "enum": [
+              "commit",
+              "domcontentloaded",
+              "load",
+              "networkidle"
+            ]
+          }
+        },
+        "required": [
+          "requestedUrl",
+          "finalUrl",
+          "httpStatus",
+          "title",
+          "attempts",
+          "durationMs",
+          "redirected",
+          "leftAllowedOrigins",
+          "waitUntil"
+        ],
+        "additionalProperties": false
+      },
+      "OpenPageResult": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "$ref": "#/components/schemas/PageInfo"
+          },
+          "navigation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NavigationResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "page",
+          "navigation"
+        ],
+        "additionalProperties": false
+      },
+      "HistoryEntry": {
+        "type": "object",
+        "properties": {
+          "seq": {
+            "type": "number"
+          },
+          "url": {
+            "type": "string"
+          },
+          "fromUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "document",
+              "same-document"
+            ]
+          },
+          "navigationType": {
+            "type": "string"
+          },
+          "initiator": {
+            "type": "string",
+            "enum": [
+              "ncrawl:navigate",
+              "ncrawl:back",
+              "ncrawl:forward",
+              "ncrawl:reload",
+              "ncrawl:recover",
+              "page"
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "ISO-8601 timestamp"
+          }
+        },
+        "required": [
+          "seq",
+          "url",
+          "fromUrl",
+          "kind",
+          "navigationType",
+          "initiator",
+          "timestamp"
+        ],
+        "additionalProperties": false
+      },
+      "NetworkRecord": {
+        "type": "object",
+        "properties": {
+          "seq": {
+            "type": "number"
+          },
+          "pageId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "resourceType": {
+            "type": "string"
+          },
+          "isNavigation": {
+            "type": "boolean"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "finished",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "status": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "contentType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "startedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp"
+          },
+          "durationMs": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "failure": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "seq",
+          "pageId",
+          "url",
+          "method",
+          "resourceType",
+          "isNavigation",
+          "state",
+          "status",
+          "contentType",
+          "startedAt",
+          "durationMs",
+          "failure"
+        ],
+        "additionalProperties": false
+      },
+      "NetworkQueryResult": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NetworkRecord"
+            }
+          },
+          "droppedRecords": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "records",
+          "droppedRecords"
+        ],
+        "additionalProperties": false
+      },
+      "PageMetadata": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "lang": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "viewport": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "type": "number"
+              },
+              "height": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "width",
+              "height"
+            ],
+            "additionalProperties": false
+          },
+          "document": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "type": "number"
+              },
+              "height": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "width",
+              "height"
+            ],
+            "additionalProperties": false
+          },
+          "scroll": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "additionalProperties": false
+          },
+          "devicePixelRatio": {
+            "type": "number"
+          },
+          "readyState": {
+            "type": "string"
+          },
+          "text": {
+            "type": "object",
+            "properties": {
+              "wordCount": {
+                "type": "number"
+              },
+              "headings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "level": {
+                      "type": "number"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "level",
+                    "text"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "wordCount",
+              "headings"
+            ],
+            "additionalProperties": false
+          },
+          "innerScrollContainers": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "url",
+          "title",
+          "lang",
+          "viewport",
+          "document",
+          "scroll",
+          "devicePixelRatio",
+          "readyState",
+          "text",
+          "innerScrollContainers"
+        ],
+        "additionalProperties": false
+      },
+      "DomNode": {
+        "type": "object",
+        "properties": {
+          "i": {
+            "type": "number"
+          },
+          "parent": {
+            "type": "number"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "attrs": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "text": {
+            "type": "string"
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "rect": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "items": false,
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "[x, y, width, height] in document CSS pixels"
+          },
+          "shadow": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "i",
+          "parent",
+          "tag",
+          "visible"
+        ],
+        "additionalProperties": false
+      },
+      "DomSnapshot": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DomNode"
+            }
+          },
+          "totalElements": {
+            "type": "number"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "frames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "nodes",
+          "totalElements",
+          "truncated",
+          "frames"
+        ],
+        "additionalProperties": false
+      },
+      "AxNode": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "level": {
+            "type": "number"
+          },
+          "expanded": {
+            "type": "boolean"
+          },
+          "checked": {
+            "type": "string"
+          },
+          "selected": {
+            "type": "boolean"
+          },
+          "disabled": {
+            "type": "boolean"
+          },
+          "focusable": {
+            "type": "boolean"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "hasPopup": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "parentId",
+          "role",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "AccessibilitySnapshot": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AxNode"
+            }
+          },
+          "outline": {
+            "type": "string"
+          },
+          "totalNodes": {
+            "type": "number"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "nodes",
+          "outline",
+          "totalNodes",
+          "truncated"
+        ],
+        "additionalProperties": false
+      },
+      "InteractiveElement": {
+        "type": "object",
+        "properties": {
+          "elementId": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "tag": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "href": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sameOrigin": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "region": {
+            "type": "string",
+            "enum": [
+              "breadcrumb",
+              "sidebar",
+              "header",
+              "footer",
+              "navigation",
+              "main",
+              "other"
+            ]
+          },
+          "landmark": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "role",
+                  "name"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "menuPath": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expanded": {
+            "type": "boolean"
+          },
+          "disabled": {
+            "type": "boolean"
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "rect": {
+            "anyOf": [
+              {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "items": false,
+                "minItems": 4,
+                "maxItems": 4,
+                "description": "[x, y, width, height] in document CSS pixels"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "safe",
+              "external",
+              "input",
+              "form-submit",
+              "mutating",
+              "logout",
+              "unknown-action"
+            ]
+          },
+          "riskReasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "locator": {
+            "type": "object",
+            "properties": {
+              "role": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": "string"
+              },
+              "exact": {
+                "type": "boolean",
+                "const": true
+              },
+              "nth": {
+                "type": "number"
+              },
+              "testId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "role",
+              "name",
+              "exact",
+              "nth"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "elementId",
+          "role",
+          "name",
+          "label",
+          "tag",
+          "href",
+          "sameOrigin",
+          "region",
+          "landmark",
+          "menuPath",
+          "visible",
+          "rect",
+          "risk",
+          "riskReasons",
+          "locator"
+        ],
+        "additionalProperties": false
+      },
+      "NavigationLink": {
+        "type": "object",
+        "properties": {
+          "elementId": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "normalizedUrl": {
+            "type": "string"
+          },
+          "sameOrigin": {
+            "type": "boolean"
+          },
+          "region": {
+            "type": "string",
+            "enum": [
+              "breadcrumb",
+              "sidebar",
+              "header",
+              "footer",
+              "navigation",
+              "main",
+              "other"
+            ]
+          },
+          "menuPath": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "depth": {
+            "type": "number"
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "excluded": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "logout",
+                  "external",
+                  "self"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "elementId",
+          "label",
+          "url",
+          "normalizedUrl",
+          "sameOrigin",
+          "region",
+          "menuPath",
+          "depth",
+          "visible",
+          "excluded"
+        ],
+        "additionalProperties": false
+      },
+      "ExpandableGroup": {
+        "type": "object",
+        "properties": {
+          "elementId": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "expanded": {
+            "type": "boolean"
+          },
+          "region": {
+            "type": "string",
+            "enum": [
+              "breadcrumb",
+              "sidebar",
+              "header",
+              "footer",
+              "navigation",
+              "main",
+              "other"
+            ]
+          },
+          "menuPath": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "safe",
+              "external",
+              "input",
+              "form-submit",
+              "mutating",
+              "logout",
+              "unknown-action"
+            ]
+          }
+        },
+        "required": [
+          "elementId",
+          "label",
+          "expanded",
+          "region",
+          "menuPath",
+          "risk"
+        ],
+        "additionalProperties": false
+      },
+      "InteractiveResult": {
+        "type": "object",
+        "properties": {
+          "elements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InteractiveElement"
+            }
+          },
+          "navigationLinks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NavigationLink"
+            }
+          },
+          "expandableGroups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExpandableGroup"
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "elements",
+          "navigationLinks",
+          "expandableGroups",
+          "truncated"
+        ],
+        "additionalProperties": false
+      },
+      "StabilityResult": {
+        "type": "object",
+        "properties": {
+          "stable": {
+            "type": "boolean"
+          },
+          "waitedMs": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "stable",
+              "timeout-dom-busy",
+              "timeout-network-busy",
+              "page-closed"
+            ]
+          }
+        },
+        "required": [
+          "stable",
+          "waitedMs",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "ScreenshotInfo": {
+        "type": "object",
+        "properties": {
+          "captureId": {
+            "type": "string"
+          },
+          "seq": {
+            "type": "number"
+          },
+          "file": {
+            "type": "string",
+            "description": "Path under the capture root; fetch with GET /v1/captures/{file}"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "viewport",
+              "full_page"
+            ]
+          },
+          "requestedMode": {
+            "type": "string",
+            "enum": [
+              "viewport",
+              "full_page"
+            ]
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "bytes": {
+            "type": "number"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "viewport": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "type": "number"
+              },
+              "height": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "width",
+              "height"
+            ],
+            "additionalProperties": false
+          },
+          "capturedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp"
+          },
+          "historySeq": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unstable",
+              "fallback"
+            ]
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "captureId",
+          "seq",
+          "file",
+          "mode",
+          "requestedMode",
+          "width",
+          "height",
+          "bytes",
+          "sha256",
+          "url",
+          "title",
+          "viewport",
+          "capturedAt",
+          "historySeq",
+          "status",
+          "notes"
+        ],
+        "additionalProperties": false
+      },
+      "PageObservation": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "number",
+            "const": 1
+          },
+          "observationId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pageId": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp"
+          },
+          "completedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "complete",
+              "partial",
+              "failed"
+            ]
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "part": {
+                  "type": "string",
+                  "enum": [
+                    "metadata",
+                    "dom",
+                    "accessibility",
+                    "interactive",
+                    "screenshot",
+                    "network",
+                    "consistency"
+                  ]
+                },
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "part",
+                "code",
+                "message"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "stability": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StabilityResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PageMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "navigationSource": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "seq": {
+                    "type": "number"
+                  },
+                  "fromUrl": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "initiator": {
+                    "type": "string",
+                    "enum": [
+                      "ncrawl:navigate",
+                      "ncrawl:back",
+                      "ncrawl:forward",
+                      "ncrawl:reload",
+                      "ncrawl:recover",
+                      "page"
+                    ]
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "document",
+                      "same-document"
+                    ]
+                  },
+                  "navigationType": {
+                    "type": "string"
+                  },
+                  "timestamp": {
+                    "type": "string",
+                    "description": "ISO-8601 timestamp"
+                  }
+                },
+                "required": [
+                  "seq",
+                  "fromUrl",
+                  "initiator",
+                  "kind",
+                  "navigationType",
+                  "timestamp"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dom": {
+            "$ref": "#/components/schemas/DomSnapshot"
+          },
+          "accessibility": {
+            "$ref": "#/components/schemas/AccessibilitySnapshot"
+          },
+          "interactiveElements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InteractiveElement"
+            }
+          },
+          "navigationLinks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NavigationLink"
+            }
+          },
+          "expandableGroups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExpandableGroup"
+            }
+          },
+          "interactiveTruncated": {
+            "type": "boolean"
+          },
+          "screenshot": {
+            "$ref": "#/components/schemas/ScreenshotInfo"
+          },
+          "network": {
+            "type": "object",
+            "properties": {
+              "requests": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/NetworkRecord"
+                }
+              },
+              "summary": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "number"
+                  },
+                  "failed": {
+                    "type": "number"
+                  },
+                  "byType": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "required": [
+                  "total",
+                  "failed",
+                  "byType"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "requests",
+              "summary"
+            ],
+            "additionalProperties": false
+          },
+          "file": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "observationId",
+          "sessionId",
+          "projectId",
+          "pageId",
+          "startedAt",
+          "completedAt",
+          "status",
+          "errors",
+          "stability",
+          "metadata",
+          "navigationSource"
+        ],
+        "additionalProperties": false
+      },
+      "CaptureFile": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "screenshot",
+              "screenshot-metadata",
+              "observation"
+            ]
+          },
+          "bytes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "file",
+          "kind",
+          "bytes"
+        ],
+        "additionalProperties": false
+      },
+      "Status": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string",
+            "const": "ncrawl-browser"
+          },
+          "apiVersion": {
+            "type": "string"
+          },
+          "uptimeSeconds": {
+            "type": "number"
+          },
+          "sessions": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number"
+              },
+              "running": {
+                "type": "number"
+              },
+              "paused": {
+                "type": "number"
+              },
+              "disconnected": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "total",
+              "running",
+              "paused",
+              "disconnected"
+            ],
+            "additionalProperties": false
+          },
+          "profiles": {
+            "type": "number"
+          },
+          "defaults": {
+            "type": "object",
+            "properties": {
+              "headless": {
+                "type": "boolean"
+              },
+              "viewport": {
+                "type": "object",
+                "properties": {
+                  "width": {
+                    "type": "number"
+                  },
+                  "height": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "width",
+                  "height"
+                ],
+                "additionalProperties": false
+              },
+              "navigationTimeoutMs": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "headless",
+              "viewport",
+              "navigationTimeoutMs"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "service",
+          "apiVersion",
+          "uptimeSeconds",
+          "sessions",
+          "profiles",
+          "defaults"
+        ],
+        "additionalProperties": false
+      },
+      "Health": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "StopAll": {
+        "type": "object",
+        "properties": {
+          "stopped": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "stopped"
+        ],
+        "additionalProperties": false
+      },
+      "Deleted": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "additionalProperties": false
+      },
+      "Closed": {
+        "type": "object",
+        "properties": {
+          "closed": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "closed"
+        ],
+        "additionalProperties": false
+      },
+      "ErrorBody": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "details": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "retryable",
+          "details"
+        ],
+        "additionalProperties": false
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": false
+          },
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "required": [
+          "ok",
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "ListProfilesResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/ProfileInfo"
+        }
+      },
+      "ListSessionsResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/SessionInfo"
+        }
+      },
+      "ListPagesResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/PageInfo"
+        }
+      },
+      "GetNavigationHistoryResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/HistoryEntry"
+        }
+      },
+      "ListCapturesResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/CaptureFile"
+        }
+      },
+      "EmptyRequest": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "CreateProfileRequest": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$"
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "projectId"
+        ],
+        "additionalProperties": false
+      },
+      "CreateSessionRequest": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "default": "persistent",
+            "type": "string",
+            "enum": [
+              "persistent",
+              "ephemeral"
+            ]
+          },
+          "projectId": {
+            "type": "string",
+            "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$"
+          },
+          "headless": {
+            "type": "boolean"
+          },
+          "viewport": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "type": "integer",
+                "minimum": 320,
+                "maximum": 7680
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 240,
+                "maximum": 4320
+              }
+            },
+            "required": [
+              "width",
+              "height"
+            ]
+          },
+          "allowedOrigins": {
+            "default": [],
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "OpenPageRequest": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "waitUntil": {
+            "type": "string",
+            "enum": [
+              "commit",
+              "domcontentloaded",
+              "load",
+              "networkidle"
+            ]
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 300000
+          },
+          "retries": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          }
+        },
+        "additionalProperties": false
+      },
+      "NavigateRequest": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "waitUntil": {
+            "type": "string",
+            "enum": [
+              "commit",
+              "domcontentloaded",
+              "load",
+              "networkidle"
+            ]
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 300000
+          },
+          "retries": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "additionalProperties": false
+      },
+      "HistoryNavRequest": {
+        "type": "object",
+        "properties": {
+          "waitUntil": {
+            "type": "string",
+            "enum": [
+              "commit",
+              "domcontentloaded",
+              "load",
+              "networkidle"
+            ]
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 300000
+          }
+        },
+        "additionalProperties": false
+      },
+      "ScreenshotRequest": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "default": "viewport",
+            "type": "string",
+            "enum": [
+              "viewport",
+              "full_page"
+            ]
+          },
+          "viewport": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "type": "integer",
+                "minimum": 320,
+                "maximum": 7680
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 240,
+                "maximum": 4320
+              }
+            },
+            "required": [
+              "width",
+              "height"
+            ]
+          },
+          "maxFullPageHeight": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 100000
+          }
+        },
+        "additionalProperties": false
+      },
+      "StabilityRequest": {
+        "type": "object",
+        "properties": {
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 120000
+          },
+          "quietMs": {
+            "type": "integer",
+            "minimum": 50,
+            "maximum": 10000
+          },
+          "longRequestMs": {
+            "type": "integer",
+            "minimum": 500,
+            "maximum": 120000
+          }
+        },
+        "additionalProperties": false
+      },
+      "InspectRequest": {
+        "type": "object",
+        "properties": {
+          "settle": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "$ref": "#/components/schemas/StabilityRequest"
+              }
+            ]
+          },
+          "screenshot": {
+            "type": "string",
+            "enum": [
+              "viewport",
+              "full_page",
+              "none"
+            ]
+          },
+          "screenshotViewport": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "type": "integer",
+                "minimum": 320,
+                "maximum": 7680
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 240,
+                "maximum": 4320
+              }
+            },
+            "required": [
+              "width",
+              "height"
+            ]
+          },
+          "include": {
+            "type": "object",
+            "properties": {
+              "dom": {
+                "type": "boolean"
+              },
+              "accessibility": {
+                "type": "boolean"
+              },
+              "interactive": {
+                "type": "boolean"
+              },
+              "network": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          },
+          "dom": {
+            "type": "object",
+            "properties": {
+              "maxNodes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 50000
+              },
+              "maxTextLength": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5000
+              }
+            },
+            "additionalProperties": false
+          },
+          "maxAccessibilityNodes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50000
+          },
+          "maxInteractiveElements": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

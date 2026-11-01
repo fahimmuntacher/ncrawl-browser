@@ -111,6 +111,14 @@ export interface Route {
   status?: number;
   /** Operation name from the NCrawl API spec (create_browser, navigate, ...). */
   op: string;
+  summary: string;
+  /** Request body / query-string schemas (documentation + OpenAPI; handlers still parse). */
+  body?: z.ZodType;
+  query?: z.ZodType;
+  /** Schema of `data` in the success envelope. */
+  response?: z.ZodType;
+  /** Content types for routes that write raw files instead of JSON envelopes. */
+  raw?: string[];
   handler: (ctx: RouteContext) => Promise<unknown> | unknown;
 }
 

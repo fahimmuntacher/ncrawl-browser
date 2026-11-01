@@ -11,6 +11,8 @@
   "scripts": {
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
-    "browsers:install": "npm exec --workspace @ncrawl/browser -- playwright install chromium"
+    "browsers:install": "npm exec --workspace @ncrawl/browser -- playwright install chromium",
+    "contracts": "npm run contracts -w @ncrawl/browser",
+    "contracts:check": "npm run contracts:check -w @ncrawl/browser"
   }
 }

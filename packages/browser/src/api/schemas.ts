@@ -6,6 +6,8 @@ import { ProjectIdSchema, ViewportSchema } from '../schemas.ts';
 const WaitUntil = z.enum(['commit', 'domcontentloaded', 'load', 'networkidle']);
 const Timeout = z.number().int().min(1_000).max(300_000);
 
+export const EmptyBody = z.strictObject({});
+
 export const CreateProfileBody = z.object({ projectId: ProjectIdSchema, displayName: z.string().trim().min(1).max(120).optional() }).strict();
 
 export const OpenPageBody = z
@@ -22,7 +24,11 @@ export const ScreenshotBody = z
   })
   .strict();
 
-export const StabilityBody = z.object({ timeoutMs: z.number().int().min(100).max(120_000).optional(), quietMs: z.number().int().min(50).max(10_000).optional() }).strict();
+export const StabilityBody = z.object({
+  timeoutMs: z.number().int().min(100).max(120_000).optional(),
+  quietMs: z.number().int().min(50).max(10_000).optional(),
+  longRequestMs: z.number().int().min(500).max(120_000).optional(),
+}).strict();
 
 export const InspectBody = z
   .object({

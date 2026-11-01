@@ -2,8 +2,9 @@
 
 Start it with `node packages/browser/src/cli.ts serve`. It listens on
 `http://127.0.0.1:4700` (`NCRAWL_API_PORT`) and prints a control-UI link.
-Phase 4 adds the formal integration contract (JSON Schemas, client examples);
-this page is the reference for what exists now.
+The machine-readable contract is `GET /v1/openapi.json` (no token needed) and
+[`contracts/openapi.json`](contracts/openapi.json); see also
+[`integration.md`](integration.md).
 
 ## Access rules
 | Rule | Detail |
@@ -43,6 +44,7 @@ refused while the session is paused or stopping, and allow one at a time per pag
 | Operation | Method & path | Body / query | Gated |
 |---|---|---|---|
 | health | `GET /health` (no token) | — | |
+| get_openapi | `GET /openapi.json` (no token) | — | |
 | get_status | `GET /status` | — | |
 | stop_all | `POST /stop` | — | |
 | list_profiles / create_profile | `GET` / `POST /profiles` | `{projectId, displayName?}` | |
@@ -62,7 +64,7 @@ refused while the session is paused or stopping, and allow one at a time per pag
 | get_dom_snapshot | `GET …/pages/{p}/dom` | `?maxNodes&maxTextLength` | yes |
 | get_accessibility_snapshot | `GET …/pages/{p}/accessibility` | `?maxNodes` | yes |
 | get_interactive_elements | `GET …/pages/{p}/interactive-elements` | `?maxElements` | yes |
-| wait_for_stable | `POST …/pages/{p}/wait-for-stable` | `{timeoutMs?, quietMs?}` | yes |
+| wait_for_stable | `POST …/pages/{p}/wait-for-stable` | `{timeoutMs?, quietMs?, longRequestMs?}` | yes |
 | capture_screenshot | `POST …/pages/{p}/screenshot` | `{mode?: viewport\|full_page, viewport?, maxFullPageHeight?}` | yes |
 | inspect_page | `POST …/pages/{p}/inspect` | `{settle?, screenshot?, screenshotViewport?, include?, dom?, maxAccessibilityNodes?, maxInteractiveElements?}` | yes |
 | list_captures | `GET /captures/{projectId\|_ephemeral}/{s}` | — | |

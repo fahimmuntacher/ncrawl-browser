@@ -25,7 +25,8 @@ export interface Harness {
 
 export async function createHarness(env: Record<string, string> = {}): Promise<Harness> {
   const dataDir = await mkdtemp(path.join(tmpdir(), 'ncrawl-test-'));
-  const config = loadConfig({ NCRAWL_DATA_DIR: dataDir, NCRAWL_HEADLESS: 'true', NCRAWL_NAV_TIMEOUT_MS: '10000', ...env });
+  // Every test API server validates its responses against the contract schemas.
+  const config = loadConfig({ NCRAWL_DATA_DIR: dataDir, NCRAWL_HEADLESS: 'true', NCRAWL_NAV_TIMEOUT_MS: '10000', NCRAWL_API_VALIDATE_RESPONSES: 'true', ...env });
   const logLines: string[] = [];
   const logger = createLogger('debug', {}, (l) => logLines.push(l));
   const profiles = new ProfileStore(dataDir);
