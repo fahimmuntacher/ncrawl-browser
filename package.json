@@ -1,0 +1,16 @@
+{
+  "name": "ncrawl",
+  "private": true,
+  "description": "NCrawl — authorized web application mapping and visual documentation",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24.11.0"
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm test --workspaces --if-present",
+    "browsers:install": "npm exec --workspace @ncrawl/browser -- playwright install chromium"
+  }
+}

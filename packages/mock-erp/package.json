@@ -1,0 +1,14 @@
+{
+  "name": "@ncrawl/mock-erp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local mock ERP (login, nested sidebar, SPA + server routes) used to test NCrawl Browser",
+  "type": "module",
+  "exports": {
+    ".": "./src/server.ts"
+  },
+  "scripts": {
+    "start": "node src/main.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}
