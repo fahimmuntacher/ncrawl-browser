@@ -1,0 +1,94 @@
+{
+  "nav": [
+    {
+      "label": "Dashboard",
+      "path": "/"
+    },
+    {
+      "label": "Inventory",
+      "children": [
+        {
+          "label": "Items",
+          "path": "/inventory/items"
+        },
+        {
+          "label": "Warehouses",
+          "path": "/inventory/warehouses"
+        },
+        {
+          "label": "Stock counts",
+          "path": "/inventory/counts"
+        }
+      ]
+    },
+    {
+      "label": "Purchasing",
+      "children": [
+        {
+          "label": "Purchase orders",
+          "path": "/purchasing/orders"
+        },
+        {
+          "label": "Suppliers",
+          "path": "/purchasing/suppliers"
+        }
+      ]
+    },
+    {
+      "label": "Sales",
+      "children": [
+        {
+          "label": "Invoices",
+          "path": "/sales/invoices"
+        },
+        {
+          "label": "Customers",
+          "path": "/sales/customers"
+        },
+        {
+          "label": "Quotes",
+          "path": "/sales/quotes"
+        }
+      ]
+    },
+    {
+      "label": "Analytics",
+      "children": [
+        {
+          "label": "Analytics overview",
+          "path": "/analytics"
+        },
+        {
+          "label": "Revenue",
+          "path": "/analytics/revenue"
+        }
+      ]
+    },
+    {
+      "label": "Admin",
+      "children": [
+        {
+          "label": "Users",
+          "path": "/admin/users"
+        },
+        {
+          "label": "Roles",
+          "path": "/admin/roles"
+        },
+        {
+          "label": "Audit log",
+          "path": "/admin/audit"
+        },
+        {
+          "label": "Danger zone",
+          "path": "/admin/danger"
+        }
+      ]
+    }
+  ],
+  "dynamic": [
+    "/inventory/items/SKU-1",
+    "/inventory/items/SKU-2",
+    "/inventory/items/SKU-3"
+  ]
+}

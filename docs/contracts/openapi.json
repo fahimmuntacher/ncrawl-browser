@@ -3095,6 +3095,14 @@
               "nth": {
                 "type": "number"
               },
+              "namePattern": {
+                "type": "string",
+                "description": "Whitespace-insensitive anchored regex of the accessible name (preferred)"
+              },
+              "patternNth": {
+                "type": "number",
+                "description": "Index among elements with the same role and namePattern"
+              },
               "testId": {
                 "type": "string"
               }
@@ -3103,7 +3111,9 @@
               "role",
               "name",
               "exact",
-              "nth"
+              "nth",
+              "namePattern",
+              "patternNth"
             ],
             "additionalProperties": false
           }

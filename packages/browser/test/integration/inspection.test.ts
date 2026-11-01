@@ -169,10 +169,16 @@ describe('interactive elements and navigation links', () => {
     const scroll = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }));
     const mismatches: string[] = [];
     for (const e of visible) {
-      const box = await page.getByRole(e.locator.role as Parameters<Page['getByRole']>[0], { name: e.locator.name, exact: true }).nth(e.locator.nth).boundingBox();
       const [x, y, w, hgt] = e.rect!;
-      if (!box || Math.abs(box.x + scroll.x - x) > 2 || Math.abs(box.y + scroll.y - y) > 2 || Math.abs(box.width - w) > 2 || Math.abs(box.height - hgt) > 2) {
-        mismatches.push(`${e.role} "${e.name}" nth=${e.locator.nth}`);
+      const role = e.locator.role as Parameters<Page['getByRole']>[0];
+      for (const [kind, loc] of [
+        ['exact', page.getByRole(role, { name: e.locator.name, exact: true }).nth(e.locator.nth)],
+        ['pattern', page.getByRole(role, { name: new RegExp(e.locator.namePattern) }).nth(e.locator.patternNth)],
+      ] as const) {
+        const box = await loc.boundingBox();
+        if (!box || Math.abs(box.x + scroll.x - x) > 2 || Math.abs(box.y + scroll.y - y) > 2 || Math.abs(box.width - w) > 2 || Math.abs(box.height - hgt) > 2) {
+          mismatches.push(`${kind}: ${e.role} "${e.name}"`);
+        }
       }
     }
     assert.deepEqual(mismatches, []);

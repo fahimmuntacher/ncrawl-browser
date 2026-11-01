@@ -1,0 +1,24 @@
+{
+  "name": "@ncrawl/test-next-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Next.js App Router app used to test NCrawl Browser: middleware auth, server components, streaming, server actions",
+  "type": "module",
+  "scripts": {
+    "build": "NEXT_TELEMETRY_DISABLED=1 next build",
+    "start": "NEXT_TELEMETRY_DISABLED=1 next start -H 127.0.0.1 -p 4620"
+  },
+  "dependencies": {
+    "next": "16.4.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0"
+  },
+  "exports": {
+    ".": "./start.ts",
+    "./routes.json": "./routes.json"
+  }
+}

@@ -33,8 +33,14 @@ export interface InteractiveElement {
   rect: [number, number, number, number] | null;
   risk: Risk;
   riskReasons: string[];
-  /** Playwright: page.getByRole(role, { name, exact: true }).nth(nth); or getByTestId(testId). */
-  locator: { role: string | null; name: string; exact: true; nth: number; testId?: string };
+  /**
+   * How to find the element again with Playwright.
+   * Preferred: page.getByRole(role, { name: new RegExp(namePattern) }).nth(patternNth)
+   *   — whitespace-insensitive, because Chromium's accessible name and Playwright's can differ in whitespace
+   *   (e.g. server-rendered React text split by comment nodes: "▸Inventory" vs "▸ Inventory").
+   * Also: page.getByRole(role, { name, exact: true }).nth(nth), or page.getByTestId(testId).
+   */
+  locator: { role: string | null; name: string; exact: true; nth: number; namePattern: string; patternNth: number; testId?: string };
 }
 
 export interface NavigationLink {
@@ -111,6 +117,7 @@ export async function collectInteractive(page: Page, raw: RawAxNode[], opts: { m
   const domFacts = await withCdp(page, (cdp) => Promise.all(selected.map((n) => describe(cdp, n.backendDOMNodeId!))));
 
   const roleNameCount = new Map<string, number>();
+  const rolePatternCount = new Map<string, number>();
   const keyCount = new Map<string, number>();
   const elements: InteractiveElement[] = [];
 
@@ -135,6 +142,10 @@ export async function collectInteractive(page: Page, raw: RawAxNode[], opts: { m
     const rn = `${role}\u0000${name}`;
     const nth = roleNameCount.get(rn) ?? 0;
     roleNameCount.set(rn, nth + 1);
+    const compact = name.replace(/\s+/g, '');
+    const rp = `${role}\u0000${compact}`;
+    const patternNth = rolePatternCount.get(rp) ?? 0;
+    rolePatternCount.set(rp, patternNth + 1);
     const pathPart = absHref ? safePath(absHref) : '';
     const key = [role, label, landmark?.role ?? '', landmark?.name ?? '', menuPath.join('>'), pathPart].join('\u0000');
     const ordinal = keyCount.get(key) ?? 0;
@@ -162,6 +173,8 @@ export async function collectInteractive(page: Page, raw: RawAxNode[], opts: { m
         name,
         exact: true,
         nth,
+        namePattern: whitespaceInsensitivePattern(compact),
+        patternNth,
         ...(facts.testId ? { testId: facts.testId } : {}),
       },
     });
@@ -311,6 +324,12 @@ function menuPathOf(n: RawAxNode, anc: RawAxNode[], byId: Map<string, RawAxNode>
 function controlledBackendIds(n: RawAxNode): number[] {
   const p = n.properties?.find((x) => x.name === 'controls')?.value as { relatedNodes?: { backendDOMNodeId?: number }[] } | undefined;
   return (p?.relatedNodes ?? []).map((r) => r.backendDOMNodeId).filter((b): b is number => b !== undefined);
+}
+
+/** Anchored regex source matching `compact` with any whitespace between characters. */
+export function whitespaceInsensitivePattern(compact: string): string {
+  const chars = Array.from(compact).map((c) => c.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&'));
+  return `^\\s*${chars.join('\\s*')}\\s*$`;
 }
 
 export function cleanLabel(name: string): string {

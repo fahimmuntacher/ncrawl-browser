@@ -8,6 +8,8 @@ uses to open, inspect and capture the applications you are allowed to inspect.
 |---|---|
 | `packages/browser` | NCrawl Browser: Playwright/Chromium session runtime + CLI |
 | `packages/mock-erp` | Local mock ERP (login, nested sidebar, 24 routes) used by tests |
+| `packages/test-apps/react-spa` | React 19 + React Router SPA test app (18 routes, localStorage login) |
+| `packages/test-apps/next-app` | Next.js 16 App Router test app (18 routes, cookie login, streaming) |
 
 Design and decisions: [`docs/architecture.md`](docs/architecture.md),
 [`docs/api.md`](docs/api.md),
@@ -15,7 +17,7 @@ Design and decisions: [`docs/architecture.md`](docs/architecture.md),
 [`docs/adr/0001-browser-runtime.md`](docs/adr/0001-browser-runtime.md),
 [research](docs/research/open-source-evaluation.md),
 [licenses](docs/research/license-compatibility.md),
-[limitations](docs/limitations.md).
+[limitations](docs/limitations.md), [testing & reliability results](docs/testing.md).
 
 ## Requirements
 - Node.js 24.11+ (runs the TypeScript sources directly; no build step)
@@ -73,7 +75,7 @@ node packages/browser/src/cli.ts login demo http://127.0.0.1:4600/app
 ## Test
 ```bash
 npm run typecheck
-npm test                                     # unit + integration (headless Chromium)
+npm test                                     # builds the test apps, then 85 unit + integration tests (~4 min)
 NCRAWL_TEST_HEADED=1 npm test                # also runs the visible-window test
 ```
 

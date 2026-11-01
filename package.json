@@ -3,16 +3,18 @@
   "private": true,
   "description": "NCrawl — authorized web application mapping and visual documentation",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "packages/test-apps/*"
   ],
   "engines": {
     "node": ">=24.11.0"
   },
   "scripts": {
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm test --workspaces --if-present",
+    "test": "npm run test-apps:build --silent && npm test --workspaces --if-present",
     "browsers:install": "npm exec --workspace @ncrawl/browser -- playwright install chromium",
     "contracts": "npm run contracts -w @ncrawl/browser",
-    "contracts:check": "npm run contracts:check -w @ncrawl/browser"
+    "contracts:check": "npm run contracts:check -w @ncrawl/browser",
+    "test-apps:build": "npm run build --workspace @ncrawl/test-react-spa --workspace @ncrawl/test-next-app"
   }
 }

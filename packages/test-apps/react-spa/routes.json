@@ -1,0 +1,32 @@
+{
+  "nav": [
+    { "label": "Dashboard", "path": "/" },
+    { "label": "CRM", "children": [
+      { "label": "Leads", "path": "/crm/leads" },
+      { "label": "Contacts", "path": "/crm/contacts" },
+      { "label": "Deals", "path": "/crm/deals" }
+    ] },
+    { "label": "Projects", "children": [
+      { "label": "Active projects", "path": "/projects/active" },
+      { "label": "Archived projects", "path": "/projects/archived" },
+      { "label": "Tasks", "children": [
+        { "label": "Task board", "path": "/projects/tasks/board" },
+        { "label": "Task list", "path": "/projects/tasks/list" }
+      ] }
+    ] },
+    { "label": "HR", "children": [
+      { "label": "People", "path": "/hr/people" },
+      { "label": "Time off", "path": "/hr/time-off" }
+    ] },
+    { "label": "Reports", "children": [
+      { "label": "Sales report", "path": "/reports/sales" },
+      { "label": "Pipeline report", "path": "/reports/pipeline" }
+    ] },
+    { "label": "Settings", "children": [
+      { "label": "Profile", "path": "/settings/profile" },
+      { "label": "Team", "path": "/settings/team" },
+      { "label": "Billing", "path": "/settings/billing" }
+    ] }
+  ],
+  "dynamic": ["/crm/deals/101", "/crm/deals/102", "/crm/deals/103"]
+}

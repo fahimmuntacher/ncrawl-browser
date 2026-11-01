@@ -158,7 +158,15 @@ export const InteractiveElementSchema = z.strictObject({
   rect: Rect.nullable(),
   risk: Risk,
   riskReasons: z.array(z.string()),
-  locator: z.strictObject({ role: z.string().nullable(), name: z.string(), exact: z.literal(true), nth: z.number(), testId: opt(z.string()) }),
+  locator: z.strictObject({
+    role: z.string().nullable(),
+    name: z.string(),
+    exact: z.literal(true),
+    nth: z.number(),
+    namePattern: z.string().describe('Whitespace-insensitive anchored regex of the accessible name (preferred)'),
+    patternNth: z.number().describe('Index among elements with the same role and namePattern'),
+    testId: opt(z.string()),
+  }),
 });
 export const NavigationLinkSchema = z.strictObject({
   elementId: z.string(),

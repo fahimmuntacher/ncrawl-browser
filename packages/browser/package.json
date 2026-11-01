@@ -22,6 +22,8 @@
   },
   "devDependencies": {
     "@ncrawl/mock-erp": "0.1.0",
+    "@ncrawl/test-next-app": "0.1.0",
+    "@ncrawl/test-react-spa": "0.1.0",
     "@types/node": "24.19.2",
     "typescript": "7.0.2"
   },

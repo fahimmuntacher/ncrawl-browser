@@ -149,8 +149,10 @@ function classify(e: unknown, url: string, timeoutMs: number): NcrawlError {
     return new NcrawlError('PAGE_CRASHED', 'The page or browser closed during navigation', { details, cause: e });
   }
   const net = message.match(/net::ERR_[A-Z_0-9]+/)?.[0];
-  return new NcrawlError('NAVIGATION_FAILED', net ? `Navigation failed: ${net}` : 'Navigation failed', {
-    retryable: TRANSIENT.test(message),
+  // Chromium replaced the navigation with its own error page (seen after a server outage, without a net:: code).
+  const errorPage = /interrupted by another navigation to "?chrome-error:/.test(message);
+  return new NcrawlError('NAVIGATION_FAILED', net ? `Navigation failed: ${net}` : errorPage ? 'Navigation failed: Chromium showed its network error page' : 'Navigation failed', {
+    retryable: TRANSIENT.test(message) || errorPage,
     details: { ...details, ...(net ? { netError: net } : {}) },
     cause: e,
   });

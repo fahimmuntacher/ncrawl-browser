@@ -1,4 +1,4 @@
-# Known Limitations (as of Phase 4)
+# Known Limitations (as of Phase 5)
 
 Each item is either verified by a test or stated as untested.
 
@@ -84,6 +84,16 @@ Each item is either verified by a test or stated as untested.
   source page was observed (discovery/crawl orchestration is future work).
 - `toPageNode` sets `status` to `captured` for partial observations; the first
   error is recorded in `error_code`/`error_message`.
+- **Locator hints**: prefer `namePattern` + `patternNth`. `name` + `exact` + `nth`
+  can miss on server-rendered React, where Chromium and Playwright compute
+  accessible names with different whitespace.
+
+## Reliability (Phase 5)
+- A crashed renderer fails page operations with `PAGE_CRASHED` immediately;
+  partial results of an interrupted inspection are not returned (call
+  `recoverPage`, then inspect again).
+- Performance was measured on one Linux machine, headless: ~0.7–1.5 s per full
+  page inspection, dominated by the stability wait (500 ms DOM + network quiet).
 
 ## Testing scope
 - Tested: static server pages, a framework-free SPA with `pushState` routing,
@@ -98,10 +108,15 @@ Each item is either verified by a test or stated as untested.
   runtime response validation), typed client, sync mapping from real
   observations, MCP adapter as a subprocess; abandoned-request and long-poll
   stability regressions.
-- **Not yet tested:** real React and Next.js applications (planned for Phase 5),
-  Windows and macOS hosts, Docker.
+- React 19 SPA and Next.js 16 App Router apps are tested (see testing.md).
+- **Not yet tested:** Windows and macOS hosts, Docker, real third-party apps,
+  SSO/MFA login flows, virtualised lists/infinite scroll, canvas UIs, app content
+  inside iframes, long multi-hour runs, many concurrent sessions.
+- **No Docker image.** Manual login needs a visible browser on the user's
+  desktop, so the supported setup is local. A headless CI image is possible but
+  has not been built or tested.
 
 ## Not implemented yet (by phase)
 - Not yet built: crawl orchestration (route discovery → user review → sequential
-  crawl), the dashboard, the FastAPI backend, exports (PDF/PNG/ZIP). Phase 5 is
-  testing and reliability on real React/Next.js apps.
+  crawl with safe menu expansion), the dashboard, the FastAPI backend, exports
+  (PDF/PNG/ZIP). These are outside the brief's five phases.

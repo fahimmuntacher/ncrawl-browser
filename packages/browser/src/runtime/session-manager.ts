@@ -372,26 +372,26 @@ export class SessionManager {
     if (!parsed.success) throw invalid(parsed.error);
     const { url, ...opts } = parsed.data;
     const { session, entry } = this.#usablePage(sessionId, pageId);
-    return session.gate.run(pageId, () => this.#withInitiator(session, pageId, 'ncrawl:navigate', () =>
-      navigate(entry.page, url, this.#navDeps(session), stripUndefined(opts) as NavigateOptions)));
+    return session.gate.run(pageId, () => crashGuarded(entry.page, () => this.#withInitiator(session, pageId, 'ncrawl:navigate', () =>
+      navigate(entry.page, url, this.#navDeps(session), stripUndefined(opts) as NavigateOptions))));
   }
 
   async goBack(sessionId: string, pageId: string, opts: NavigateOptions = {}): Promise<NavigationResult> {
     const { session, entry } = this.#usablePage(sessionId, pageId);
-    return session.gate.run(pageId, () =>
-      this.#withInitiator(session, pageId, 'ncrawl:back', () => traverseHistory(entry.page, 'back', this.#navDeps(session), opts)));
+    return session.gate.run(pageId, () => crashGuarded(entry.page, () =>
+      this.#withInitiator(session, pageId, 'ncrawl:back', () => traverseHistory(entry.page, 'back', this.#navDeps(session), opts))));
   }
 
   async goForward(sessionId: string, pageId: string, opts: NavigateOptions = {}): Promise<NavigationResult> {
     const { session, entry } = this.#usablePage(sessionId, pageId);
-    return session.gate.run(pageId, () =>
-      this.#withInitiator(session, pageId, 'ncrawl:forward', () => traverseHistory(entry.page, 'forward', this.#navDeps(session), opts)));
+    return session.gate.run(pageId, () => crashGuarded(entry.page, () =>
+      this.#withInitiator(session, pageId, 'ncrawl:forward', () => traverseHistory(entry.page, 'forward', this.#navDeps(session), opts))));
   }
 
   async reload(sessionId: string, pageId: string, opts: NavigateOptions = {}): Promise<NavigationResult> {
     const { session, entry } = this.#usablePage(sessionId, pageId);
-    return session.gate.run(pageId, () =>
-      this.#withInitiator(session, pageId, 'ncrawl:reload', () => reload(entry.page, this.#navDeps(session), opts)));
+    return session.gate.run(pageId, () => crashGuarded(entry.page, () =>
+      this.#withInitiator(session, pageId, 'ncrawl:reload', () => reload(entry.page, this.#navDeps(session), opts))));
   }
 
   /** Replace a crashed page with a new tab at its last URL, keeping the page ID. */
@@ -427,10 +427,10 @@ export class SessionManager {
    */
   async runOnPage<T>(sessionId: string, pageId: string, op: (target: InspectionTarget) => Promise<T>): Promise<T> {
     const { session, entry } = this.#usablePage(sessionId, pageId);
-    return session.gate.run(pageId, async () => {
+    return session.gate.run(pageId, () => crashGuarded(entry.page, async () => {
       const history = await this.#track(session, entry);
       return op({ sessionId, projectId: session.projectId, pageId, page: entry.page, history, network: session.network });
-    });
+    }));
   }
 
   getNavigationHistory(sessionId: string, pageId: string, sinceSeq = 0): HistoryEntry[] {
@@ -498,6 +498,27 @@ export class SessionManager {
       pages: s.pages.list(),
     };
   }
+}
+
+/**
+ * Run `op` but fail fast with PAGE_CRASHED if the page's renderer crashes or the page closes meanwhile.
+ * Needed because a pending page.evaluate() on a crashed renderer never settles in Playwright,
+ * which would otherwise hang the caller and keep the page locked forever.
+ */
+function crashGuarded<T>(page: Page, op: () => Promise<T>): Promise<T> {
+  let onCrash!: () => void;
+  let onClose!: () => void;
+  const guard = new Promise<never>((_, reject) => {
+    onCrash = () => reject(new NcrawlError('PAGE_CRASHED', 'The page crashed during the operation; call recoverPage', { retryable: true }));
+    onClose = () => reject(new NcrawlError('PAGE_CRASHED', 'The page or browser closed during the operation', { retryable: true }));
+    page.once('crash', onCrash);
+    page.once('close', onClose);
+  });
+  guard.catch(() => {});
+  return Promise.race([op(), guard]).finally(() => {
+    page.off('crash', onCrash);
+    page.off('close', onClose);
+  });
 }
 
 function invalid(error: { issues: { path: PropertyKey[]; message: string }[] }): NcrawlError {

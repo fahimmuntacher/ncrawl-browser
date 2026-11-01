@@ -3,3 +3,5 @@ node_modules/
 # Browser profiles and captures contain authenticated session state — never commit.
 .ncrawl-data/
 *.log
+packages/test-apps/*/dist/
+packages/test-apps/*/.next/
